@@ -1,105 +1,182 @@
 #+title: Literate configuration for emacs
 
-* packages 
-Install packages with package install selected packages
-#+BEGIN_SRC emacs-lisp
-(setq package-selected-packages '(projectile rjsx-mode js2-mode yasnippet-snippets yasnippet web-mode which-key lsp-mode dracula-theme company))
-#+END_SRC
-* Look and feel
-Set the theme and the font through the customize options available in emacs.
-#+BEGIN_SRC emacs-lisp
-  ;; toolbar, menubar, scrollbar
-  (tool-bar-mode 0)
-  (scroll-bar-mode 0)
-  (menu-bar-mode 0)
-  ;; fonts
-  ;; (set-face-attribute 'default nil :font "Iosevka Nerd Font 13")
-   (set-face-attribute 'default nil :font "JetBrainsMono Nerd Font 13")
-  ;; load theme
-  (load-theme 'tango-dark t)
-  ;; line numbers
-  (global-display-line-numbers-mode t)
-  (setq display-line-numbers-type 'relative) ;;relative line numbers
+* Install/Reinstall packages
+To make things more portable when you set up a new machine and want to
+import your configuration you could set the variable
+package-selected-package to the packages you use, and execute
+~package-install-selected-packages~ to install the packages in the new
+emacs or reinstall if you had a problem thinkering with your
+configuration.
 
-  ;; thin cursor
-  (setq-default cursor-type 'bar)
-#+End_SRC
-* Melpa
-Emacs only has the GNU Elpa repositories (free software) but almost nothing is available in those repositories, Melpa is a little bit better because almost every plugin and theme is there, so configure melpa is a must.
 #+BEGIN_SRC emacs-lisp
-  ;; use melpa
-  (require 'package)
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-  (package-initialize)
+(setq package-selected-packages '(projectile rjsx-mode js2-mode
+yasnippet-snippets yasnippet web-mode which-key lsp-mode dracula-theme
+company))
+#+END_SRC
+
+* Look and feel
+You can disable some UI parts of emacs to have a more clean look, you
+can achieve that disabling the tool bar, scroll bar and the menu bar
+with =tool-bar-mode=, =scroll-bar-mode= and =menu-bar-mode=
+respectively.
+#+begin_src emacs-lisp
+  (tool-bar-mode 0) (scroll-bar-mode 0) (menu-bar-mode 0)
+#+end_src
+
+About the font, emacs can display various fonts in various part of the
+emacs ui, so you can set a font for some buffers or set a font for the
+modline, or for the entire frame (in emacs the 'window' of the program
+is called frame, windows are the open files that you have when you
+split the view of two or the same file, and a buffer is the thing
+between the frame and the modeline). simply in this config I set a
+font for all of emacs with =(set-face-attribute)= in emacs are
+multiple ways to set a font so if you want to know more there's a wiki
+page about it.  [[https://www.emacswiki.org/emacs/SetFonts]]
+
+#+begin_src emacs-lisp
+  ;; (set-face-attribute 'default nil :font "Iosevka Nerd Font 13")
+   (set-face-attribute 'default nil :font "JetBrainsMono Nerd Font
+   13")
+#+end_src
+
+Setting a color theme.  Set a color with with M-x =load-theme= and
+press tab to see a list of available themes, with c-n and c-p you move
+to the theme you want and with enter or return select the theme, also
+if you like menus you can use M-x =customize-themes= and set a color
+theme from there, but if you have a configuration file like this
+sometimes the use of =customize= can break some things in your init
+file so be aware.
+
+For the color theme to be permanent use the function =load-theme= in
+your configuration file just put the name of the theme, in the code
+next the =t= is to tell emacs that you dont want user confirmation to
+load the theme, this happens because third party themes sometimes are
+not 'safe' for emacs so when you setted up a theme in your config file
+at startup emacs always ask for confirmation to load the theme so the
+=t= is for not askin confirmation to load the theme.
+
+#+begin_src emacs-lisp
+      (load-theme 'tango-dark t)
+ #+end_src
+remember if you have a theme enabled and you want to test other themes
+with =load-theme= be aware that emacs can enable multiple themes at
+the same time, so you must disable the theme that you are already
+using to not create sort like a mixture of both themes. You can do
+this with M-x =disable-theme= and selecting the theme you want to
+disable.
+
+I like to have display numbers for everything so
+=global-display-line-numbers-mode= is for that, also recently discover
+in vim you can have relative line numbers, this mean that each line is
+numbered relative to the cursor's current position and show the
+/distance/ to that line so for example if you go to the top of the
+file the cursor will be marked in the line 1 (this in emacs, in other
+editor may vary) and the next line numbers will be the amount of
+numbers to /get/ to that line so if the current cursor position is in
+the line 1 to get to line 2 you just need to move one line down, to
+get to the line 5 you'll need to move 4 line down, and so on. Also
+this apply for lines above the cursor, following the previous example
+if the cursos position is in the line 5 the lines above the cursor
+will show 1, 2, 3 and 4 so for getting to the line 1 you need to move
+4 lines up.
+
+#+begin_src emacs-lisp
+  (global-display-line-numbers-mode t) (setq display-line-numbers-type
+  'relative) ;;relative line numbers
+#+end_src
+
+I like the bar cursor '|', the default cursor emacs is the block '█'
+(in unicode is U+2588) to change it you need to set the variable
+=cursor-type= to the type of cursor avilable in emacs in my case is
+bar, is you want to know other values acepted for =cursor-type= you
+can do C-h v cursor-type inside emacs
+#+begin_src emacs-lisp
+  (setq-default cursor-type 'bar)
+#+end_src
+
+
+* Melpa
+Emacs only has the GNU Elpa repositories (free software) by default,
+if you want more packages Melpa is good for that, since most of the
+popular packages are there.
+
+#+BEGIN_SRC emacs-lisp
+  ;; use melpa (require 'package) (add-to-list 'package-archives
+  '("melpa" . "https://melpa.org/packages/") t) (package-initialize)
 #+end_src
 
 * Projectile
-I find project.el and projectile very similar, however neither can replace the other, so its better have both
+I find project.el and projectile very similar, however neither can
+replace the other, so its better have both and project.el is alread
+part of emacs.
+
 #+BEGIN_SRC emacs-lisp
-  ;; Projectile
-  (projectile-mode +1)
-  ;;key map
-  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+  ;; Projectile (projectile-mode +1) ;;key map (define-key
+  projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 #+END_SRC
 
 * LSP
-Lsp is optional but very helpfull at the time of programing in diferent programing languages. In this case I've only set up for java development.
+Lsp is optional but very helpfull at the time of programing in
+diferent programing languages. In this case I've only set up for java
+development.
+
 #+BEGIN_SRC emacs-lisp
-  ;;LSP
-  (require 'lsp-mode)
+  ;;LSP (require 'lsp-mode)
 
-  (setq lsp-keymap-prefix "s-i")
-  (define-key lsp-mode-map (kbd "s-i") lsp-command-map)
+  (setq lsp-keymap-prefix "s-i") (define-key lsp-mode-map (kbd "s-i")
+  lsp-command-map)
 
-  (with-eval-after-load 'lsp-mode
-    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
+  (with-eval-after-load 'lsp-mode (add-hook 'lsp-mode-hook
+  #'lsp-enable-which-key-integration))
 
 					  ;  (require 'lsp-java)
-					  ;(add-hook 'java-mode-hook #'lsp)
+					  ;(add-hook 'java-mode-hook
+					  ;#'lsp)
 #+END_SRC
 
 * Wich Key
-Show you the keys for certain commands.
+Which key is a help for when you know the key combinations of certain
+commands so when you type a key that is part of a conjuction of keys
+for a command which key will show you a window in the bottom of the
+screen showing you the key combinations to do a command. Very useful
+if you are new to emacs.
+
 #+BEGIN_SRC emacs-lisp
-  ;;which key
-  (require 'which-key)
-  (which-key-mode)
+  ;;which key (require 'which-key) (which-key-mode)
   (which-key-setup-side-window-bottom)
 #+END_SRC
 
 * Company Mode
-Provides a little popup for autocompletion like and IDE or vscode.
+Provides a little popup for autocompletion like and IDE or vscode or
+kate.
 #+BEGIN_SRC emacs-lisp
-;;  (require 'company)
-  (add-hook 'after-init-hook 'global-company-mode)
-  (with-eval-after-load 'company
-    (define-key company-active-map (kbd "M-/") #'company-complete))
-  (with-eval-after-load 'company-complete
-    (define-key company-active-map
-      (kbd "TAB")
-      #'company-complete-common-or-cycle)
-    (define-key company-active-map
-      (kbd "<backtab>")
-      (lambda ()
-	(interactive)
-	(company-complete-common-or-cycle -1))))
-  (with-eval-after-load 'company
-    (define-key company-active-map (kbd "M-.") #'company-show-location)
-    (define-key company-active-map (kbd "RET") nil))
+;; (require 'company) (add-hook 'after-init-hook 'global-company-mode)
+  (with-eval-after-load 'company (define-key company-active-map (kbd
+  "M-/") #'company-complete)) (with-eval-after-load 'company-complete
+  (define-key company-active-map (kbd "TAB")
+  #'company-complete-common-or-cycle) (define-key company-active-map
+  (kbd "<backtab>") (lambda () (interactive)
+  (company-complete-common-or-cycle -1)))) (with-eval-after-load
+  'company (define-key company-active-map (kbd "M-.")
+  #'company-show-location) (define-key company-active-map (kbd "RET")
+  nil))
 #+END_SRC
 
 * Org mode
-its org mode
+Org mode has the ability of fold parts of the document, when i load
+this config I liked to have it folded so I can have easy acces to
+every part of the config without using much C-n and C-p.
+
 #+BEGIN_SRC emacs-lisp
   (setq org-startup-folded t)
 #+END_SRC
 
 * Web mode
+a mode that give better support for files common in web development.
 #+BEGIN_SRC emacs-lisp
-  (require 'web-mode)
-  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.css\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
+  (require 'web-mode) (add-to-list 'auto-mode-alist '("\\.html?\\'"
+  . web-mode)) (add-to-list 'auto-mode-alist '("\\.css\\'"
+  . web-mode)) (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.php\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
@@ -109,35 +186,27 @@ its org mode
   (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
 
-  ;;hooks for web mode
-  (defun my-web-mode-hook()
-    (setq web-mode-markup-indent-offset 2)
-    (setq web-mode-css-indent-offset 2)
-    (setq web-mode-code-indent-offset 2)
-    ;;Auto pair
-    (setq web-mode-enable-auto-pairing t)
-    ;;CSS colorization
-    (setq web-mode-enable-css-colorization t)
-    )
+  ;;hooks for web mode (defun my-web-mode-hook() (setq
+  web-mode-markup-indent-offset 2) (setq web-mode-css-indent-offset 2)
+  (setq web-mode-code-indent-offset 2) ;;Auto pair (setq
+  web-mode-enable-auto-pairing t) ;;CSS colorization (setq
+  web-mode-enable-css-colorization t) )
 
 
   (add-hook 'web-mode-hook 'my-web-mode-hook)
-
-
-
-
 #+END_SRC
 
 * Yasnnipet
+Snnipets for you.
 #+BEGIN_SRC emacs-lisp
-  (require 'yasnippet)
-  (yas-global-mode 1)
+  (require 'yasnippet) (yas-global-mode 1)
 #+END_SRC
 
 * Javascript
+Enable a major mode that give you better support for js files in emacs
 #+BEGIN_SRC emacs-lisp
-  ;; Enable major mode for javascript editing
-  (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
-					  ;enable for shell scripts via node.js
-  (add-to-list 'interpreter-mode-alist '("node" . js2-mode))
+  ;; Enable major mode for javascript editing (add-to-list
+  'auto-mode-alist '("\\.js\\'" . js2-mode)) ;enable for shell scripts
+  via node.js (add-to-list 'interpreter-mode-alist '("node"
+  . js2-mode))
 #+END_SRC
