@@ -1,4 +1,3 @@
-
 #+title: Literate configuration for emacs
 
 * packages 
@@ -14,7 +13,8 @@ Set the theme and the font through the customize options available in emacs.
   (scroll-bar-mode 0)
   (menu-bar-mode 0)
   ;; fonts
-  (set-face-attribute 'default nil :font "Iosevka Nerd Font 13")
+  ;; (set-face-attribute 'default nil :font "Iosevka Nerd Font 13")
+   (set-face-attribute 'default nil :font "JetBrainsMono Nerd Font 13")
   ;; load theme
   (load-theme 'tango-dark t)
   ;; line numbers
