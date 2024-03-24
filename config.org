@@ -1,4 +1,5 @@
 #+title: Literate configuration for emacs
+#+startup: content
 
 * Install/Reinstall packages
 To make things more portable when you set up a new machine and want to
@@ -10,21 +11,26 @@ configuration.
 
 #+BEGIN_SRC emacs-lisp
   (setq package-selected-packages '(projectile rjsx-mode js2-mode
-					       yasnippet-snippets yasnippet web-mode which-key lsp-mode dracula-theme
-					       company))
-#+END_SRC
-
+					       yasnippet-snippets
+					       yasnippet web-mode
+					       which-key lsp-mode
+					       dracula-theme company
+					       yaml-mode yaml-pro yaml))
+					       #+END_SRC
 * Look and feel
+** UI customizations
+*** UI
 You can disable some UI parts of emacs to have a more clean look, you
 can achieve that disabling the tool bar, scroll bar and the menu bar
 with =tool-bar-mode=, =scroll-bar-mode= and =menu-bar-mode=
 respectively.
 #+begin_src emacs-lisp
-  (tool-bar-mode 0)
-  (scroll-bar-mode 0)
-  (menu-bar-mode 0)
+(tool-bar-mode 0)
+(scroll-bar-mode 0)
+(menu-bar-mode 0)
 #+end_src
 
+*** Font
 About the font, emacs can display various fonts in various part of the
 emacs ui, so you can set a font for some buffers or set a font for the
 modline, or for the entire frame (in emacs the 'window' of the program
@@ -36,9 +42,10 @@ multiple ways to set a font so if you want to know more there's a wiki
 page about it.  [[https://www.emacswiki.org/emacs/SetFonts]]
 
 #+begin_src emacs-lisp
-  (set-face-attribute 'default nil :font "Iosevka Nerd Font 13")
+(set-face-attribute 'default nil :font "Input Mono Narrow" :height 120)
 #+end_src
 
+*** Theme
 Setting a color theme.  Set a color with with M-x =load-theme= and
 press tab to see a list of available themes, with c-n and c-p you move
 to the theme you want and with enter or return select the theme, also
@@ -56,8 +63,9 @@ at startup emacs always ask for confirmation to load the theme so the
 =t= is for not askin confirmation to load the theme.
 
 #+begin_src emacs-lisp
-  (load-theme 'dracula t)
+(load-theme 'dracula t)
 #+end_src
+
 remember if you have a theme enabled and you want to test other themes
 with =load-theme= be aware that emacs can enable multiple themes at
 the same time, so you must disable the theme that you are already
@@ -65,6 +73,7 @@ using to not create sort like a mixture of both themes. You can do
 this with M-x =disable-theme= and selecting the theme you want to
 disable.
 
+** Behavior customizations
 I like to have display numbers for everything so
 =global-display-line-numbers-mode= is for that, also recently discover
 in vim you can have relative line numbers, this mean that each line is
@@ -80,18 +89,47 @@ if the cursos position is in the line 5 the lines above the cursor
 will show 1, 2, 3 and 4 so for getting to the line 1 you need to move
 4 lines up.
 
+Also its useful to know the number of columns that the text has inside
+the buffer so It'll be displayed the column number of the cursor in
+the modeline, very useful in code 
+
 #+begin_src emacs-lisp
-  (global-display-line-numbers-mode t)
-  (setq display-line-numbers-type 'relative) ;;relative line numbers
+(global-display-line-numbers-mode t)
+(setq display-line-numbers-type 'relative) ;;relative line numbers
+(column-number-mode 1)
 #+end_src
 
 I like the bar cursor '|', the default cursor emacs is the block '█'
 (in unicode is U+2588) to change it you need to set the variable
 =cursor-type= to the type of cursor avilable in emacs in my case is
 bar, is you want to know other values acepted for =cursor-type= you
-can do C-h v cursor-type inside emacs
+can do C-h v cursor-typpe inside emacs
 #+begin_src emacs-lisp
-  (setq-default cursor-type 'bar)
+(setq-default cursor-type 'bar)
+#+end_src
+
+Emacs has a mode called "show-paren-mode" that highlights matching
+parentheses, brackets, and braces. This can be very helpful for
+navigating through code.
+#+begin_src emacs-lisp
+(show-paren-mode 1)
+#+end_src
+
+Ido means Interactively Do things it's a package built in emacs that
+gives you more things to do with your buffers, it's hard to explain, you
+have to experience it.
+#+begin_src emacs-lisp
+(setq ido-enable-flex-matching t
+      ido-everywhere t
+      ido-create-new-buffer 'always
+      ido-ignore-extensions t)
+(setq-default confirm-nonexistent-file-or-buffe nil)
+(ido-mode 1)
+#+end_src
+
+Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/
+#+begin_src emacs-lisp
+(electric-pair-mode 1)
 #+end_src
 
 * Melpa
@@ -100,39 +138,15 @@ if you want more packages Melpa is good for that, since most of the
 popular packages are there.
 
 #+BEGIN_SRC emacs-lisp
-  ;; use melpa
-  (require 'package) (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-  (package-initialize)
-  #+end_src
+;; use melpa
+(require 'package) (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(package-initialize)
+#+end_src
 
-* Projectile
-I find project.el and projectile very similar, however neither can
-replace the other, so its better have both and project.el is alread
-part of emacs.
-
-#+BEGIN_SRC emacs-lisp
-  ;; Projectile
-  (projectile-mode +1) ;;key map
-  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-#+END_SRC
-
-* LSP
-Lsp is optional but very helpfull at the time of programing in
-diferent programing languages. In this case I've only set up for java
-development.
-
-#+BEGIN_SRC emacs-lisp
-  (require 'lsp-mode)
-
-  (setq lsp-keymap-prefix "s-i")
-  (define-key lsp-mode-map (kbd "s-i") lsp-command-map)
-
-  (with-eval-after-load 'lsp-mode
-    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
-
-  ;; (require 'lsp-java)
-  ;; (add-hook 'java-mode-hook #'lsp)
-#+END_SRC
+* Project Management
+I find project.el and projectile very similar but I prefer to use
+the built in tool for my needs, mainly because projectile its a bit
+overkill for my needs.
 
 * Wich Key
 Which key is a help for when you know the key combinations of certain
@@ -171,52 +185,112 @@ kate.
   #+END_SRC
 
 * Org mode
+** Start org mode with folded elements
 Org mode has the ability of fold parts of theor document, when i load
 this config I liked to have it folded so I can have easy acces to
 every part of the config without using much C-n and C-p.
-
 #+BEGIN_SRC emacs-lisp
-  (setq org-startup-folded t)
+  (setq org-startup-folded nil) ;;change for now
 #+END_SRC
 
-* Web mode
-a mode that give better support for files common in web development.
-#+BEGIN_SRC emacs-lisp
-  (require 'web-mode)
-  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web))
-  (add-to-list 'auto-mode-alist '("\\.css\\'". web-mode))
-  (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.php\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
+** Better defaults for org-mode
+Org-mode by default is a little bit anoying in some areas so the next
+code its mean to "fix" them.
+#+begin_src emacs-lisp
+  (setq org-src-preserve-indentation t	;Preserva indentacion original
+	org-edit-src-content-indentation 0 ;No agregar indentacion adicional
+	org-src-tab-acts-natively t	 ; Usa la tecla tab para indentar codigo
+	org-src-fontify-natively t	 ; Resalta sintaxis en bloques de codigo
+	org-src-tab-indent t)		 ; Indenta codigo con tab
+#+end_src
 
-  ;;hooks for web mode
-  (defun my-web-mode-hook()
-    (setq web-mode-markup-indent-offset 2)
-    (setq web-mode-css-indent-offset 2)
-    (setq web-mode-code-indent-offset 2) ;;Auto pair
-    (setq web-mode-enable-auto-pairing t) ;;CSS colorization
-    (setq web-mode-enable-css-colorization t) )
+** Heading sizes and more
+All the headings have the same size also the text is not aligned with his
+heading by default so to change the heading sizes and align the text with
+the coresponding header.
 
-  (add-hook 'web-mode-hook 'my-web-mode-hook)
-  #+END_SRC
+*** Custom heading sizes
+#+begin_src emacs-lisp
+;; Configurar estilos para los niveles de encabezados
+(dolist (level '((1 . 1.4) (2 . 1.2) (3 . 1.1) (4 . 1.0) (5 . 0.9)))
+  (set-face-attribute (intern (format "org-level-%d" (car level))) nil
+		      :inherit (intern (format "outline-%d" (car level)))
+		      :height (cdr level)))
 
-* Yasnnipet
-Snnipets for you.
-#+BEGIN_SRC emacs-lisp
-  (require 'yasnippet)
-  (yas-global-mode 1)
-#+END_SRC
+;; Config de estilo para el titulo del documento org
+(set-face-attribute 'org-document-title nil :height 2.0)
 
-* Javascript
-Enable a major mode that give you better support for js files in emacs
-#+BEGIN_SRC emacs-lisp
-  ;; Enable major mode for javascript editing
-  (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode)) ;enable for shell scripts via node.js
-  (add-to-list 'interpreter-mode-alist '("node". js2-mode))
-#+END_SRC
+;; Ajustar el texto a su encabezado
+;; (defun my/write-prose ()
+;;   (variable-pitch-mode 0)
+;;   (set-face-attribute 'org-indent nil :inherit '(org-hide variable-pitch))
+;;   (set-face-attribute 'org-hide nil :inherit 'fixed-pitch))
+
+;; (add-hook 'org-mode-hook #'my/write-prose)
+#+end_src
+
+*** Custom face for code blocks
+Also you can configure how code blocks look like with custom-set-faces or
+set-face-attribute
+#+begin_src emacs-lisp
+(set-face-attribute 'org-block nil
+                    :extend t
+		    :foreground "foreground" ;:foreground "#ffb86c"
+                    :slant 'italic)
+
+(set-face-attribute 'org-block-begin-line nil
+                    :extend t
+                    :overline "foreground"
+                    :underline '(:color foreground-color :style line :position t)
+                    :slant 'italic
+                    :weight 'bold)
+
+(set-face-attribute 'org-block-end-line nil
+                    :inherit 'org-block-begin-line
+                    :extend t
+                    :overline nil
+                    :underline '(:color foreground-color :style line :position t))
+
+;;Using custom-set-faces
+;; (custom-set-faces
+;;  '(org-block ((t (:extend t :foreground "#ffb86c" :slant italic))))
+;;  '(org-block-begin-line ((t (:inherit org-meta-line :extend t :overline "foreground" :underline (:color foreground-color :style line :position t) :slant italic :weight bold))))
+;;  '(org-block-end-line ((t (:inherit org-block-begin-line :extend t :overline nil :underline (:color foreground-color :style line :position t))))))
+
+#+end_src
+
+*** Mixed fonts
+#+begin_src emacs-lisp
+(set-face-attribute 'variable-pitch nil :family "Noto Sans" :height 1.0)
+(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 0.9)
+
+(custom-set-faces
+ '(org-block ((t (:inherit fixed-pitch))))
+ '(org-table ((t (:inherit fixed-pitch))))
+ '(org-list-dt ((t (:inherit fixed-pitch))))
+ '(org-list-dd ((t (:inherit fixed-pitch))))
+ '(org-tag ((t (:inherit fixed-pitch))))
+ '(org-quote ((t (:inherit fixed-pitch))))
+ '(org-code ((t (:inherit fixed-pitch))))
+ '(org-link ((t (:inherit fixed-pitch))))
+ '(org-toc ((t (:inherit fixed-pitch))))
+ '(org-formula ((t (:inherit fixed-pitch))))
+ '(org-verbatim ((t (:inherit fixed-pitch))))
+ '(org-strike ((t (:inherit fixed-pitch))))
+ '(org-checkbox ((t (:inherit fixed-pitch))))
+ '(org-list ((t (:inherit fixed-pitch))))
+ '(org-meta-line ((t (:inherit fixed-pitch)))))
+
+(add-hook 'org-mode-hook 'variable-pitch-mode)
+#+end_src
+
+* Tree-Sitter
+#+begin_src emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode))
+(setq major-mode-remap-alist
+      '((c-mode . c-ts-mode)
+	(c++-mode . c++-ts-mode)
+	(yaml-mode . yaml-ts-mode)
+	(conf-toml-mode . toml-ts-mode)))
+#+end_src
+
