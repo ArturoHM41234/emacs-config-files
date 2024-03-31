@@ -43,6 +43,7 @@ page about it.  [[https://www.emacswiki.org/emacs/SetFonts]]
 
 #+begin_src emacs-lisp
 (set-face-attribute 'default nil :font "Input Mono Narrow" :height 120)
+(set-face-attribute 'line-number nil :inherit 'fixed-pitch)
 #+end_src
 
 *** Theme
@@ -63,7 +64,12 @@ at startup emacs always ask for confirmation to load the theme so the
 =t= is for not askin confirmation to load the theme.
 
 #+begin_src emacs-lisp
-(load-theme 'dracula t)
+(load-theme 'modus-operandi t)
+(setq modus-themes-mixed-fonts t)
+
+;; Transparent background
+(set-frame-parameter nil 'alpha-background 90)
+(add-to-list 'default-frame-alist '(alpha-background . 90))
 #+end_src
 
 remember if you have a theme enabled and you want to test other themes
@@ -74,6 +80,7 @@ this with M-x =disable-theme= and selecting the theme you want to
 disable.
 
 ** Behavior customizations
+*** Line and column numbers.
 I like to have display numbers for everything so
 =global-display-line-numbers-mode= is for that, also recently discover
 in vim you can have relative line numbers, this mean that each line is
@@ -96,9 +103,11 @@ the modeline, very useful in code
 #+begin_src emacs-lisp
 (global-display-line-numbers-mode t)
 (setq display-line-numbers-type 'relative) ;;relative line numbers
-(column-number-mode 1)
+(set-face-attribute 'line-number nil :inherit 'fixed) ;;Make the face of the line numbers always fixed-pitch
+(column-number-mode 1) ;;display columns in the modeline
 #+end_src
 
+*** The cursor.
 I like the bar cursor '|', the default cursor emacs is the block '█'
 (in unicode is U+2588) to change it you need to set the variable
 =cursor-type= to the type of cursor avilable in emacs in my case is
@@ -108,16 +117,20 @@ can do C-h v cursor-typpe inside emacs
 (setq-default cursor-type 'bar)
 #+end_src
 
+*** Parenthesis (brackets and braces).
 Emacs has a mode called "show-paren-mode" that highlights matching
-parentheses, brackets, and braces. This can be very helpful for
-navigating through code.
+parentheses, brackets, and braces.
+Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/
 #+begin_src emacs-lisp
 (show-paren-mode 1)
+(electric-pair-mode 1)
 #+end_src
 
+*** Ido.
 Ido means Interactively Do things it's a package built in emacs that
-gives you more things to do with your buffers, it's hard to explain, you
-have to experience it.
+gives you more things to do with your buffers, In comands like
+find-file or dired gives you options for what you may want to search
+or do.
 #+begin_src emacs-lisp
 (setq ido-enable-flex-matching t
       ido-everywhere t
@@ -127,9 +140,26 @@ have to experience it.
 (ido-mode 1)
 #+end_src
 
-Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/
+*** Disable backup files
+Disable backup and lock files and update files automatically
 #+begin_src emacs-lisp
-(electric-pair-mode 1)
+(setq make-backup-files nil
+      backup-inhibited t)
+(global-auto-revert-mode 1)
+(setq global-auto-revert-non-file-buffers t)
+#+end_src
+
+*** Save place and change the "customization location"
+Remember the last place you visited in a file
+#+begin_src emacs-lisp
+(save-place-mode 1)
+#+end_src
+
+Changing the location of the "Custom file".
+Sometimes emacs put "custom "code into the init file. I don't that to happen
+so.
+#+begin_src emacs-lisp
+(setq custom-file (locate-user-emacs-file "custom-vars.el"))
 #+end_src
 
 * Melpa
@@ -144,10 +174,7 @@ popular packages are there.
 #+end_src
 
 * Project Management
-I find project.el and projectile very similar but I prefer to use
-the built in tool for my needs, mainly because projectile its a bit
-overkill for my needs.
-
+Just use project.el
 * Wich Key
 Which key is a help for when you know the key combinations of certain
 commands so when you type a key that is part of a conjuction of keys
@@ -208,7 +235,6 @@ code its mean to "fix" them.
 All the headings have the same size also the text is not aligned with his
 heading by default so to change the heading sizes and align the text with
 the coresponding header.
-
 *** Custom heading sizes
 #+begin_src emacs-lisp
 ;; Configurar estilos para los niveles de encabezados
@@ -235,7 +261,7 @@ set-face-attribute
 #+begin_src emacs-lisp
 (set-face-attribute 'org-block nil
                     :extend t
-		    :foreground "foreground" ;:foreground "#ffb86c"
+		    :foreground "foreground" ;;foreground "#ffb86c"
                     :slant 'italic)
 
 (set-face-attribute 'org-block-begin-line nil
@@ -262,7 +288,8 @@ set-face-attribute
 *** Mixed fonts
 #+begin_src emacs-lisp
 (set-face-attribute 'variable-pitch nil :family "Noto Sans" :height 1.0)
-(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 0.9)
+(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 1.0)
+;;(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 0.9)
 
 (custom-set-faces
  '(org-block ((t (:inherit fixed-pitch))))
@@ -294,3 +321,108 @@ set-face-attribute
 	(conf-toml-mode . toml-ts-mode)))
 #+end_src
 
+* Keybinding
+s** Windows
+This keybindings remaps some basics keys for managing windows in emacs (reseize, new windows, etc)
+To resize windows you only can enlarge a window (vertical), make it wider or narrower.
+- `c-x ^' makes the current window talle (`enlarge-window')
+- `C-x }' makes it wider (‘enlarge-window-horizontally’)
+- `C-x {' makes it narrower (‘shrink-window-horizontally’)
+
+I remap those commands and using repeat mode to custom de repeat map to those command,
+with ~global-set-key~ I create the new maps for managing the size of windows inside emacs and
+nwith ~defvar resize-window-repeat-map~ define  a set of maps that repeated with activate a command.
+Also with ~(put 'command 'repeat-map  'maps-defined-earlier)~ you asigns those maps to the
+repeat maps that =repeat-mode= uses.
+
+I also remap the comands to create new windows to ones of my linking, trying to not leave the home row
+to much or at least stay more close to it.
+
+Emacs can create windows sensibly, thats controlled by a funcion called ~split-window-sensibly~ this function
+is called for example when you do =find-file-other-window= so it can decide where to create the new window,
+for the function decided where to create a new window it uses 2 variables ~split-height-threshold~ and
+~split-width-threshold~ to check if the current window has at least n columns or lines to be suitable
+to create a new window, /if you know more on how in works you can get into detail checking the documetation of the
+function/, in a nutshell if ~split-height-threshold~ is setted to a low value the new window will be opened below
+the current windows, something similar happens with ~split-width-threshold~ but if this one is setted to a low value
+/(like 50 I think)/ the new window it'll be opened to the left of the current window.
+
+#+begin_src emacs-lisp
+  (repeat-mode 1)
+
+;;  (setq split-width-threshold 100)
+  (global-set-key (kbd "C-x w t") 'enlarge-window) ;; t for taller
+  (global-set-key (kbd "C-x w s") 'shrink-window)  ;; s for shrink
+  (global-set-key (kbd "C-x w n") 'shrink-window-horizontally) ;; n for narrow
+  (global-set-key (kbd "C-x w e") 'enlarge-window-horizontally) ;; e for enlarge
+
+  (defun my/create-new-window (direction)
+    "Create a new window based on DIRECTION if DIRECTION is 'vertical, do
+    split-window-horizontally (new window on the on the right), otherwise do
+    split-window-vertically (new window bellow) and move the cursor to that window."
+    (interactive "sDirection (h for horizontal, v for vertical): ")
+    (let ((split-func
+	   (if (string= direction "v")
+	       #'split-window-horizontally
+	     (if (string= direction "h")
+		 #'split-window-vertically
+	       nil))))
+      (when split-func
+	(funcall split-func)
+	(other-window 1))))
+
+  (global-set-key (kbd "C-c wl") (lambda () (interactive) (my/create-new-window "v"))) ;; Create window on the right
+  (global-set-key (kbd "C-c wd") (lambda () (interactive) (my/create-new-window "h"))) ;; Create window below
+  (global-set-key (kbd "C-c fow") #'ido-find-file-other-window) ;; Find file in other window file-other-window
+  (global-set-key (kbd "C-c dow") #'ido-dired-other-window) ;; Open dired in other window; dired-other-window
+  (global-set-key (kbd "C-c cow") #'delete-other-windows) ;; Delete all the windows except the current window; close-other-windows
+  (global-set-key (kbd "C-c wc") #'delete-window) ;; Close current window; window-close
+  (global-set-key (kbd "M-o") #'other-window) ;; Change other window
+  (global-set-key (kbd "C-c bow") #'ido-switch-buffer-other-window)
+
+  (defvar my/resize-window-repeat-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map "t" 'enlarge-window)
+      (define-key map "s" 'shrink-window)
+      (define-key map "n" 'shrink-window-horizontally)
+      (define-key map "e" 'enlarge-window-horizontally)
+      map)
+    "Keymap to repeat resize window key sequences.")
+
+  (dolist (cmd '(enlarge-window shrink-window shrink-window-horizontally enlarge-window-horizontally))
+    (put cmd 'repeat-map 'my/resize-window-repeat-map))
+
+#+end_src
+
+* Speed Bar
+Recently discover that emacs has a file tree integrated in emacs called speedbar is a little bit ugly
+and it opens in another frame, so you can install a package called sr-speedbar that integrates
+speedbar inside the emacs frame.
+#+begin_src emacs-lisp
+;; (use-package sr-speedbar
+;;   :ensure t)
+
+(setq speedbar-show-unknown-files t)
+(setq sr-speedbar-width 30
+      sr-speedbar-skip-other-window-p t)
+
+;; To open move the cursor to the file you opened
+(with-eval-after-load 'sr-speedbar
+  (advice-add 'sr-speedbar-open :after
+              #'(lambda ()
+                  ;; Remove weird sr-speedbar hooks
+                  (remove-hook 'speedbar-before-visiting-file-hook #'sr-speedbar-before-visiting-file-hook)
+                  (remove-hook 'speedbar-before-visiting-tag-hook #'sr-speedbar-before-visiting-tag-hook)
+                  (remove-hook 'speedbar-visiting-file-hook #'sr-speedbar-visiting-file-hook)
+                  (remove-hook 'speedbar-visiting-tag-hook #'sr-speedbar-visiting-tag-hook))))
+
+(add-hook 'emacs-startup-hook (lambda ()
+  (sr-speedbar-open)
+  ))
+
+(global-set-key (kbd "C-M-0") 'sr-speedbar-toggle)
+(global-set-key (kbd "M-0") 'sr-speedbar-select-window)
+;; To keep speebar window width after resizing
+;; (with-current-buffer sr-speedbar-buffer-name
+;;   (setq window-size-fixed 'width))
+#+end_src
