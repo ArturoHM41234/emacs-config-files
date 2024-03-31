@@ -81,8 +81,10 @@ disable.
 
 ** Behavior customizations
 *** Line and column numbers.
-I like to have display numbers for everything so
-=global-display-line-numbers-mode= is for that, also recently discover
+I like to have line numbers for almost everything so
+=global-display-line-numbers-mode= is for that, but I only
+wanted enabled in code files so better just enable ~display-line-numbers-mode~
+when prog-mode is enable. Also recently discover
 in vim you can have relative line numbers, this mean that each line is
 numbered relative to the cursor's current position and show the
 /distance/ to that line so for example if you go to the top of the
@@ -100,9 +102,10 @@ Also its useful to know the number of columns that the text has inside
 the buffer so It'll be displayed the column number of the cursor in
 the modeline, very useful in code 
 
+
 #+begin_src emacs-lisp
-(global-display-line-numbers-mode t)
 (setq display-line-numbers-type 'relative) ;;relative line numbers
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
 (set-face-attribute 'line-number nil :inherit 'fixed) ;;Make the face of the line numbers always fixed-pitch
 (column-number-mode 1) ;;display columns in the modeline
 #+end_src
@@ -321,8 +324,8 @@ set-face-attribute
 	(conf-toml-mode . toml-ts-mode)))
 #+end_src
 
-* Keybinding
-s** Windows
+* Keybindings
+** Windows
 This keybindings remaps some basics keys for managing windows in emacs (reseize, new windows, etc)
 To resize windows you only can enlarge a window (vertical), make it wider or narrower.
 - `c-x ^' makes the current window talle (`enlarge-window')
