@@ -1,322 +1,660 @@
-#+title: Literate configuration for emacs
-#+startup: content
+#+title:	Literate configuration for Emacs
+#+author:	Arturo Hernandez Moreno
+#+property:	header-args :results silent :tangle "~/.config/emacs/init.el"
+#+startup:	num
+#+startup:	overview
 
-* Install/Reinstall packages
-To make things more portable when you set up a new machine and want to
-import your configuration you could set the variable
-package-selected-package to the packages you use, and execute
-~package-install-selected-packages~ to install the packages in the new
-emacs or reinstall if you had a problem thinkering with your
-configuration.
+* The setup.
+My configuration is written using literate programming, this is
+achieved using org mode  to write the configuration in prose with code
+blocks and  [[https://orgmode.org/worg/org-contrib/babel/intro.html][babel]] to /tangle/ the  code blocks to the init.el file.
 
-#+BEGIN_SRC emacs-lisp
-  (setq package-selected-packages '(projectile rjsx-mode js2-mode
-					       yasnippet-snippets
-					       yasnippet web-mode
-					       which-key lsp-mode
-					       dracula-theme company
-					       yaml-mode yaml-pro yaml))
-					       #+END_SRC
+Normally  if you want to have a literate configuration you will have a
+=inti.el= file with a call to the ~org-babel-load-file~ function
+pointing to your org file. That method works, but is very slow, since
+we are asking Emacs at startup to load first org-mode (and other
+unnecessary stuff) and after that read the your configuration org file
+and then executes the code inside the code blocks on your configuration
+file. 
+
+The other  advantage of babel and the  =(#+)= headers available in org mode
+to [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]] the code to a =.el= file specifically my =init=   file, also
+you can specify to which file you want to tangle some code block you
+just need to append ~:tangle "path/to/your/.el/file"~ to the begin of
+your source code block typically speaking of Emacs it will be
+~#+begin_src emacs-lisp~.
+
+Then I just need to update my Emacs configuration, I edit this file
+and evaluate a code block and press =C-c C-v C-t= to tangle it to my
+init file if I want to save those changes. Also you can put in the top
+of your int file or run the function from emacs in your org file.
+
+#+begin_src emacs-lisp :tangle no
+(org-babel-tangle "path/to/file")
+#+end_src
+
+Adding the following to your org file will copy (tangle) the code blocks into your init.el file when you run org-babel-tangle.
+#+begin_center
+#+PROPERTY:	header-args :results silent :tangle "~/.config/emacs/init.el"
+#+end_center
+
+To exclude specific source blocks from being tangled add =:tangle no= to the header.
+
+** Structure of the Emacs configuration.
+Just keep things simple. I have two files
+- The main init file =init.el= and
+- An early initialization file =early-initl.el= to speed Emacs startup.
+  
+* Early init
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+;;; early-init.el --- Early initialization -*- lexical-binding: t; fill-column: 80 -*-
+
+;; Author: Arturo Hernandez Moreno
+;; This file is not part of GNU Emacs
+;; Add some gnu license bullshit
+
+;;; Commentary:
+;; This file is meant for use with Emacs 27 or higher. See
+;; https://lists.gnu.org/archive/html/emacs-devel/2017-10/msg00372.html
+;; for more information.
+
+;;; Code:
+#+end_src
+
+** Speed up startup
+I do not have a deep understanding of “garbage collection”, though I
+have learn through trial and error that I can maximize the
+threshold during startup to make Emacs boot a bit faster. What I am
+doing here is to arrange for the relevant values to be set to very
+high values during startup and then be brought down to something
+more practical once Emacs is done loading.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+;; Temporarily increase the garbage collection threshold.  These
+;; changes help shave off about half a second of startup time.  The
+;; `most-positive-fixnum' is DANGEROUS AS A PERMANENT VALUE.  See the
+;; `emacs-startup-hook' a few lines below for what I actually use.
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.5)
+
+;; Same idea as above for the `file-name-handler-alist' and the
+;; `vc-handled-backends' with regard to startup speed optimization.
+;; Here I am storing the default value with the intent of restoring it
+;; via the `emacs-startup-hook'.
+(defvar prot-emacs--file-name-handler-alist file-name-handler-alist)
+(defvar prot-emacs--vc-handled-backends vc-handled-backends)
+
+(setq file-name-handler-alist nil
+      vc-handled-backends nil)
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 1000 1000 8)
+                  gc-cons-percentage 0.1
+                  file-name-handler-alist prot-emacs--file-name-handler-alist
+                  vc-handled-backends prot-emacs--vc-handled-backends)))
+#+end_src
+
+*** Fundamental mode at startup
+This helps with load time since no extra libraries are loaded.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+(setq initial-major-mode 'fundamental-mode)
+#+end_src
+
+**  UI related settings
+By changing some UI settings at this early stage you can save time for when the frame is draw on the
+scree, and also avoid the initial famous flash of light.
+
+*** Changing the frame.
+#+begin_src emacs-lisp :tangle "early-init.el"
+;; Resizing the frame in Emacs can be an expensive part of changing
+;; the font. By inhibiting this, we easily halve startup times with
+;; fonts that are larger than the system default.
+(setq-default frame-inhibit-implied-resize t)
+
+;; Don't show size info (or anything else) in frame title (setq-default frame-title-format "\n")
+(setq-default frame-title-format '("%b"))  ;; Make frame title the buffer
+
+;; Disable startup-screen and startup message
+(setq-default inhibit-startup-screen t)
+(setq-default inhibit-startup-message t)
+
+;; Disable splash screen
+(setq-default inhibit-splash-screen t)
+
+;;(add-hook 'window-setup-hook 'toggle-frame-maximized t) ;;used this one because with the other the transparency is disabled if you maximized the window
+
+;; start the initial frame maximized
+;;(add-to-list 'initial-frame-alist '(fullscreen . maximized))
+(setq initial-frame-alist
+      '((top . 1) (left . 1) (width . 80) (height . 40)))
+
+;; start every frame maximized
+;;(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+#+end_src
+
+*** Removing UI elements
+Avoid seeing how the Emacs UI elements get enabled and disabled if
+you disabled in your config. this disabled the elements before Emacs
+can enabled at startup, just to be disabled by your config later. So
+we disabled before the init file is loaded so the frame load as this
+UI elements never be there (also they look bad).
+
+#+begin_src emacs-lisp :ptangle "early-init.el"
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+
+;; This disable the flash of light at startup
+;;(set-face-attribute 'default nil :background "#000000" :foreground "#ffffff")
+#+end_src
+
+** Initialize package manager and end or early-init.el
+Initialize installed packages at this early stage, by using the available cache .
+I had tried a setup with this set to nil in the early-init.el, but (i) it ended up being slower and
+(ii) various package commands, like =describe-package=, did not have an index of
+packages to work with, requiring a =package-refresh-contents=.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+(setq package-enable-at-startup t)
+
+(provide 'early-init)
+
+;;; early-init.el ends here
+#+end_src
+
+* Setup package management
+** Package and MELPA
+This is the default package manager of Emacs. here I'm just enabling
+MELPA and initialize package only if is not initialized yet.  Emacs
+only has the GNU ElPA repositories (free software) by default, if you
+want more packages MELPA is good for that, since most of the popular
+packages are there.
+
+#+begin_src emacs-lisp
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(unless package--initialized (package-initialize))
+#+end_src
+
+** Use-package
+Use-package is not a package manager, is a macro that allows you to
+isolate package configuration also is looks very clean and help to
+manage packages.
+
+#+begin_src emacs-lisp
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+(eval-when-compile
+  (require 'use-package))
+;;(setq use-package-always-ensure t)
+#+end_src
+
 * Look and feel
-** UI customizations
-*** UI
-You can disable some UI parts of emacs to have a more clean look, you
-can achieve that disabling the tool bar, scroll bar and the menu bar
-with =tool-bar-mode=, =scroll-bar-mode= and =menu-bar-mode=
-respectively.
-#+begin_src emacs-lisp
-(tool-bar-mode 0)
-(scroll-bar-mode 0)
-(menu-bar-mode 0)
-#+end_src
-
-*** Font
-About the font, emacs can display various fonts in various part of the
-emacs ui, so you can set a font for some buffers or set a font for the
-modline, or for the entire frame (in emacs the 'window' of the program
-is called frame, windows are the open files that you have when you
-split the view of two or the same file, and a buffer is the thing
-between the frame and the modeline). simply in this config I set a
-font for all of emacs with =(set-face-attribute)= in emacs are
-multiple ways to set a font so if you want to know more there's a wiki
-page about it.  [[https://www.emacswiki.org/emacs/SetFonts]]
-
-#+begin_src emacs-lisp
-(set-face-attribute 'default nil :font "Input Mono Narrow" :height 120)
-(set-face-attribute 'line-number nil :inherit 'fixed-pitch)
-#+end_src
-
-*** Theme
+** UI customization's
+*** Themes
 Setting a color theme.  Set a color with with M-x =load-theme= and
-press tab to see a list of available themes, with c-n and c-p you move
+press tab to see a list of available themes, with =c-n= and =c-p= you move
 to the theme you want and with enter or return select the theme, also
-if you like menus you can use M-x =customize-themes= and set a color
+if you like menus you can use =M-x customize-themes= and set a color
 theme from there, but if you have a configuration file like this
 sometimes the use of =customize= can break some things in your init
 file so be aware.
 
 For the color theme to be permanent use the function =load-theme= in
 your configuration file just put the name of the theme, in the code
-next the =t= is to tell emacs that you dont want user confirmation to
+next the =t= is to tell Emacs that you don't want user confirmation to
 load the theme, this happens because third party themes sometimes are
-not 'safe' for emacs so when you setted up a theme in your config file
-at startup emacs always ask for confirmation to load the theme so the
-=t= is for not askin confirmation to load the theme.
+not 'safe' for Emacs so when you set up a theme in your config file
+at startup Emacs always ask for confirmation to load the theme so the
+=t= is for not asking confirmation to load the theme.
 
 #+begin_src emacs-lisp
-(load-theme 'modus-operandi t)
-(setq modus-themes-mixed-fonts t)
+    (defun my/change-cursor-color ()
+      "Change the color of the cursor to white
+	 when the theme is a dark theme"
+      (let* ((color-mode (frame-parameter nil 'background-mode))
+	     (cursor-color (if (eq color-mode 'dark)
+			       "white"
+			     nil)))
+	(set-face-attribute 'cursor nil :background cursor-color)))
 
-;; Transparent background
-(set-frame-parameter nil 'alpha-background 90)
-(add-to-list 'default-frame-alist '(alpha-background . 90))
+    (defvar after-enable-theme-hook nil
+      "Hook to run after enabling a theme.")
+
+    (defun run-after-enable-theme-hook (&rest _args)
+      "Run `after-enable-theme-hook'."
+      (run-hooks 'after-enable-theme-hook)
+      (my/change-cursor-color))
+
+    (advice-add 'enable-theme :after #'run-after-enable-theme-hook)
+    (add-hook 'after-init-hook #'run-after-enable-theme-hook)
+
+    (defun my/load-theme (theme)
+      "Custom `load-theme' function.
+  This function disable all other themes you may have enabled"
+      (interactive
+       (list
+	(intern (completing-read "Load custom theme: "
+				 (mapcar #'symbol-name
+					 (custom-available-themes))))))
+      (if theme
+	  (progn
+	    (load-theme theme t)
+	    (mapc #'disable-theme (cdr custom-enabled-themes)))
+	(message "A theme is needed"))
+
+      (customize-save-variable 'custom-enabled-themes custom-enabled-themes))
+
+    ;;(setq modus-themes-mixed-fonts t)
+    ;; Transparent background
+    ;;(set-frame-parameter nil 'alpha-background 90)
+    ;;(add-to-list 'default-frame-alist '(alpha-background . 90))
 #+end_src
 
-remember if you have a theme enabled and you want to test other themes
-with =load-theme= be aware that emacs can enable multiple themes at
+Remember if you have a theme enabled and you want to test other themes
+with =load-theme= be aware that Emacs can enable multiple themes at
 the same time, so you must disable the theme that you are already
 using to not create sort like a mixture of both themes. You can do
 this with M-x =disable-theme= and selecting the theme you want to
 disable.
 
-** Behavior customizations
-*** Line and column numbers.
-I like to have line numbers for almost everything so
-=global-display-line-numbers-mode= is for that, but I only
-wanted enabled in code files so better just enable ~display-line-numbers-mode~
-when prog-mode is enable. Also recently discover
-in vim you can have relative line numbers, this mean that each line is
-numbered relative to the cursor's current position and show the
-/distance/ to that line so for example if you go to the top of the
-file the cursor will be marked in the line 1 (this in emacs, in other
-editor may vary) and the next line numbers will be the amount of
-numbers to /get/ to that line so if the current cursor position is in
-the line 1 to get to line 2 you just need to move one line down, to
-get to the line 5 you'll need to move 4 line down, and so on. Also
-this apply for lines above the cursor, following the previous example
-if the cursos position is in the line 5 the lines above the cursor
-will show 1, 2, 3 and 4 so for getting to the line 1 you need to move
-4 lines up.
+*** Fonts and faces
+About the font, Emacs can display various fonts in various part of the
+Emacs UI, so you can set a font for some buffers or set a font for the
+mode line, or for the entire frame (in Emacs the 'window' of the program
+is called frame, windows are the open files that you have when you
+split the view of two or the same file, and a buffer is the thing
+between the frame and the mode line).
 
-Also its useful to know the number of columns that the text has inside
-the buffer so It'll be displayed the column number of the cursor in
-the modeline, very useful in code 
-
+simply in this config I set a font for all of Emacs with
+=(set-face-attribute)= in Emacs are multiple ways to set a font so if
+you want to know more there's a wiki page about it.
+[[https://www.emacswiki.org/emacs/SetFonts]]
 
 #+begin_src emacs-lisp
-(setq display-line-numbers-type 'relative) ;;relative line numbers
-(add-hook 'prog-mode-hook 'display-line-numbers-mode)
-(set-face-attribute 'line-number nil :inherit 'fixed) ;;Make the face of the line numbers always fixed-pitch
-(column-number-mode 1) ;;display columns in the modeline
+;; Default font
+(set-face-attribute 'default nil
+		    :font "Input Mono Narrow 11")
+
+(set-face-attribute 'font-lock-comment-face nil
+		    :slant 'italic
+		    :weight 'regular)
+
+(set-face-attribute 'fixed-pitch nil
+		    :family "Input Mono Narrow") ; :height 130)
+
+(set-face-attribute 'variable-pitch nil
+		    :font "Input Sans Narrow 16" ; "Fira Sans" ; "Input Sans Narrow"
+		    :weight 'light)
+
+
+;; If you want to use a proportional font and
+;; relative line numbers you will experience some
+;; stuttering in lines, this is solved by using a
+;; monospaced font for the line-number face.
+
+;; (set-face-attribute 'line-number nil :inherit 'fixed-pitch :weight 'regular)
+
+#+end_src
+
+** Behavior customizations
+*** Line and column numbers.
+Emacs has some ways of displaying line numbers most of them are
+deprecated, also since emacs 26, its a builtin mode to show line
+numbers.
+
+Doing =M-x display-line-numbers-mode= in a buffer will display line
+numbers in that buffer locally, if you want line numbers in all buffers
+you can do =M-x global-display-line-numbers-mode=.
+
+You can have types of line numbers I prefer relative line numbers.
+
+#+begin_src emacs-lisp
+(setq display-line-numbers-type 'relative) ;'relative, 'visual, t -> for absolute line numbers
+
+(add-hook 'prog-mode-hook 'display-line-numbers-mode) ;
+
+(line-number-mode -1)		    ; Prevent line numbers from appearing in the mode line 
+(column-number-mode 1)		    ; Display columns in the mode line
+
+(setq truncate-lines t		     ; Disable word wrapping
+      mode-line-percent-position nil) ; Remove the legend in the mode line that indicates the percentage of where are in the file
+#+end_src
+
+*** Fundamental Movement Keys
+Make that =c-n= add a new line whe the cursor is at the end of the
+buffer.
+
+#+begin_src emacs-lisp
+(setq next-line-add-newlines t)
 #+end_src
 
 *** The cursor.
-I like the bar cursor '|', the default cursor emacs is the block '█'
-(in unicode is U+2588) to change it you need to set the variable
-=cursor-type= to the type of cursor avilable in emacs in my case is
-bar, is you want to know other values acepted for =cursor-type= you
-can do C-h v cursor-typpe inside emacs
+By default is a block you can change it to 'bar 'hollow 'hbar
+'(bar . size) '(box . size).
+
+The next block of code shows a very simple  function defined to change the
+type of cursor according to the major mode. In this case set the bar for
+org mode buffers and the block for everything else.
+
 #+begin_src emacs-lisp
-(setq-default cursor-type 'bar)
+(defun my/change-cursor-type ()
+  "Change the cursor type, according the major-mode"
+  (let ((cursor_type
+	 (if (derived-mode-p 'prog-mode)
+	     'box
+	   'bar)))
+    (setq cursor-type cursor_type)))
+
+
+(add-hook 'org-mode-hook #'my/change-cursor-type)
 #+end_src
 
-*** Parenthesis (brackets and braces).
-Emacs has a mode called "show-paren-mode" that highlights matching
+*** Delimiters (parentheses, brackets and braces).
+Emacs has a mode called =show-paren-mode= that highlights matching
 parentheses, brackets, and braces.
-Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/
+
+I think in Emacs 29 (or 28?) there is a new user  option called =show-paren-
+context-when-offscreen=, that is function is when you put the cursor
+in a delimiter and the other side of the delimiter is off the screen
+(meaning you can't see it) Emacs will show the corresponding delimiter
+(and some context) in the echo area. It also come with the =overlay= and
+=child= options that display the delimiter in a left upper corner using an
+overlay or a child frame respectively.
+/note: it only works with closing delimiters not with opening./
+
+Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/.
+
 #+begin_src emacs-lisp
 (show-paren-mode 1)
+(setq show-paren-context-when-offscreen 'overlay)
 (electric-pair-mode 1)
 #+end_src
 
-*** Ido.
-Ido means Interactively Do things it's a package built in emacs that
-gives you more things to do with your buffers, In comands like
-find-file or dired gives you options for what you may want to search
-or do.
+*** Mini buffer completion(Fido, ido).
+Emacs has two types of completion systems: minibuffer with
+=completion-read=, and in-buffer with =completion-at-point=
+or =complet-symbol= and =dabbrev=
+
+In order to have a more "traditional" or complete things for the user
+you can extend the default functionality of Emacs with packages like
+=Corfu= or =company-mode=.
+
+Talkin about minibuffer completion Emacs has 3 builtin packages that
+use =completion-read=. but work in different ways.
+
+By default when you do =C-x C-f= to open a file or =M-x= to execute a
+comand, you don't get any auto completion (sort of) as you
+type. Instead you get a completion by pressing =TAB=, then Emacs shows
+you what is available to complete depending of what you type, if don't
+type anything Emacs just throws you all the options it has in
+alphabetical order.
+
+To get a more user-friendly completion you could use the 3 available
+modes. Out of the box you don't need to configure them, /but you can/.
+These modes are =ido-mode, icomplete-mode= and =fido-mode= and the 3 of
+them have some similarities but differ in some other areas.
+
+1. =ido-mode= shows you all the options available inside brackets (this
+   ones -->{}) separated by =|= and as you type the option more similar
+   to what you write is highlighted, if the option is what you meant
+   press enter and Emacs take that option as the correct. Also you can
+   move trough the options pressing =C-s= and =C-r=.
+
+2. =icomplete mode=. For this mode you can get an idea of what this mode
+   does by just looking at its name. But now seriously, icomplete
+   gives you the same thins as =ido= but in the =M-x= mini buffer. I
+   forgot to mention this but ido only work when searching files
+   (=find-file= command) and switching buffers (=switch-to-buffer=
+   command) and while ido-mode work with fuzzy matching, icomplete
+   don't, so if you are looking for a directory that can't recall
+   exactly what its name is, icomplete let you down on this. Also
+   icomplete has a variant called =icomplete-vertical-mode= that works
+   the same but expands the mini buffer vertically (you can tell by
+   its name, wow) and the complete options are in a list.
+
+3. Then we have =fido-mode= this one is equal in the interface, the way
+   it looks and how present options to the user, in fact I think
+   fido-mode is an improvement to icomplete-mode, it looks like
+   exactly like icomplete and behaves similar and also has a vertical
+   variant for people that don't like everything crushed inside the
+   mini buffer. The only difference (As Far As I Know) is that
+   fido-mode has fuzzy searching and don't have to many options to
+   customize its behavior, and you can move through the list with =C-n=
+   and =C-p= to select the one you want.
+
 #+begin_src emacs-lisp
-(setq ido-enable-flex-matching t
-      ido-everywhere t
-      ido-create-new-buffer 'always
-      ido-ignore-extensions t)
-(setq-default confirm-nonexistent-file-or-buffe nil)
-(ido-mode 1)
+(setq-default confirm-nonexistent-file-or-buffer nil) ;; nil means don't confirm when visiting a new file or buffer
+(fido-vertical-mode 1)
 #+end_src
 
-*** Disable backup files
-Disable backup and lock files and update files automatically
+*** Disable backup files and update buffers automatically
+The title is pretty straight forward.
+
 #+begin_src emacs-lisp
-(setq make-backup-files nil
-      backup-inhibited t)
-(global-auto-revert-mode 1)
-(setq global-auto-revert-non-file-buffers t)
+(setq make-backup-files nil		; Deactivates the Creation of backup files
+      backup-inhibited t)		; Don't backup
+(global-auto-revert-mode 1)		; Auto "update" the buffers if the file change in disk
+(setq global-auto-revert-non-file-buffers t) ; Revert buffers like dired
 #+end_src
 
 *** Save place and change the "customization location"
-Remember the last place you visited in a file
-#+begin_src emacs-lisp
+Remember the last place you visited in a file.
+
+#+begin_src Emacs-lisp
 (save-place-mode 1)
 #+end_src
 
 Changing the location of the "Custom file".
-Sometimes emacs put "custom "code into the init file. I don't that to happen
+Sometimes Emacs put "custom" code into the init file. I don't want that to happen
 so.
+
 #+begin_src emacs-lisp
 (setq custom-file (locate-user-emacs-file "custom-vars.el"))
+(load custom-file 't)
 #+end_src
 
-* Melpa
-Emacs only has the GNU Elpa repositories (free software) by default,
-if you want more packages Melpa is good for that, since most of the
-popular packages are there.
-
-#+BEGIN_SRC emacs-lisp
-;; use melpa
-(require 'package) (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
-#+end_src
-
-* Project Management
-Just use project.el
-* Wich Key
-Which key is a help for when you know the key combinations of certain
-commands so when you type a key that is part of a conjuction of keys
-for a command which key will show you a window in the bottom of the
-screen showing you the key combinations to do a command. Very useful
-if you are new to emacs.
-
-#+BEGIN_SRC emacs-lisp
-  ;;which key
-  (require 'which-key)
-  (which-key-mode)
-  (which-key-setup-side-window-bottom)
-#+END_SRC
-
-* Company Mode
-Provides a little popup for autocompletion like and IDE or vscode or
-kate.
-#+BEGIN_SRC emacs-lisp
-  (require 'company)
-  (add-hook 'after-init-hook 'global-company-mode)
-  (with-eval-after-load 'company
-    (define-key company-active-map (kbd "M-/") #'company-complete))
-  (with-eval-after-load 'company-complete
-    (define-key company-active-map
-      (kbd "TAB")
-      #'company-complete-common-or-cycle)
-    (define-key company-active-map
-      (kbd "<backtab>")
-      (lambda ()
-	(interactive)
-	(company-complete-common-or-cycle -1))))
-  (with-eval-after-load 'company
-    (define-key company-active-map (kbd "M-.") #'company-show-location)
-    (define-key company-active-map (kbd "RET") nil))
-  #+END_SRC
-
-* Org mode
-** Start org mode with folded elements
-Org mode has the ability of fold parts of theor document, when i load
-this config I liked to have it folded so I can have easy acces to
-every part of the config without using much C-n and C-p.
-#+BEGIN_SRC emacs-lisp
-  (setq org-startup-folded nil) ;;change for now
-#+END_SRC
-
-** Better defaults for org-mode
-Org-mode by default is a little bit anoying in some areas so the next
-code its mean to "fix" them.
+*** Copy whole lines
+This code is extracted from the emacs wiki:  [[https://www.emacswiki.org/emacs/CopyingWholeLines#h5o-13][Copy whole lines without selection (ctrl-spc)]]
 #+begin_src emacs-lisp
-  (setq org-src-preserve-indentation t	;Preserva indentacion original
-	org-edit-src-content-indentation 0 ;No agregar indentacion adicional
-	org-src-tab-acts-natively t	 ; Usa la tecla tab para indentar codigo
-	org-src-fontify-natively t	 ; Resalta sintaxis en bloques de codigo
-	org-src-tab-indent t)		 ; Indenta codigo con tab
+;; Copy whole lines without marking the region to copy
+(defun copy-region-or-lines (n &optional beg end)
+  "Copy region or the next N lines into the kill ring.
+  When called repeatedly, move to the next line and append it to
+  the previous kill."
+  (interactive "p")
+  ;; defining variables
+  (let* ((repeatp (eq last-command 'copy-region-or-lines))
+         (kill-command
+          (if repeatp
+	      ;;These lambda functions execute the copying
+              #'(lambda (b e) (kill-append (concat "\n" (buffer-substring b e)) nil)) ; This one executes if your repeatedly press M-w
+            #'(lambda (b e) (kill-ring-save b e (use-region-p))))) ; This one is the normal one
+         beg
+         end)
+    ;; body and asigning values to the variables
+    (if repeatp
+        (let ((goal-column (current-column)))
+          (next-line)))
+    (setq beg (or beg
+                  (if (use-region-p)
+                      (region-beginning)
+                    (line-beginning-position))))
+    (setq end (or end
+                  (if (use-region-p)
+                      (region-end)
+                    (line-end-position n))))
+    (funcall kill-command beg end)
+    (pulse-momentary-highlight-region beg end)
+    (message "copied --> \"%s\"" (car kill-ring))
+    (if repeatp (message "%s" (car kill-ring)))))
+
+(global-set-key (kbd "M-w") 'copy-region-or-lines)
 #+end_src
 
-** Heading sizes and more
-All the headings have the same size also the text is not aligned with his
-heading by default so to change the heading sizes and align the text with
-the coresponding header.
-*** Custom heading sizes
+*** Copy a word
+To copy a word without marking it with =C-spc=.
+
+#+begin_src emacs-lisp
+;; TODO: add that when you repeatedly press M-W append the next word to the copy sort like expand-region
+
+(defun copy-word ()
+  "Copy word under the cursor."
+  (interactive)
+  (let ((symbol (thing-at-point 'symbol))
+	(bounds (bounds-of-thing-at-point 'symbol))
+	beg end)
+    (setq beg (car bounds)
+	  end (cdr bounds))
+    (when symbol
+      (kill-new symbol)
+      (pulse-momentary-highlight-region beg end)
+      (message "copied --> \"%s\"" symbol))))
+
+;;(global-set-key (kbd "C-c ww") 'my-get-boundary-and-thing)
+(global-set-key (kbd "M-W") 'copy-word)
+#+end_src
+
+*** Search
+Show the current match number and the total number of matches in the search prompt.
+
+#+begin_src emacs-lisp
+(setq isearch-lazy-count t)
+#+end_src
+* Org mode
+** Better defaults for org-mode
+Org-mode by default is a little bit annoying in some areas so the next
+code its mean to "fix" them.
+
+#+begin_src emacs-lisp
+(setq org-src-preserve-indentation t	;Preserva indentacion original
+      org-edit-src-content-indentation 0 ;No agregar indentacion adicional
+      org-src-tab-acts-natively t	 ; Usa la tecla tab para indentar codigo
+      org-src-fontify-natively t	 ; Resalta sintaxis en bloques de codigo
+      org-src-tab-indent t		 ; Indenta codigo con tab
+      org-hide-emphasis-markers t	 ; Hide the // ** markers that indicates bold, italics etc
+      org-bullets-bullet-list '(" ")	 ; No bullets, needs org-bullets package
+      org-pretty-entities t
+      org-fontify-whole-heading-line t
+      org-fontify-done-headline t
+      org-fontify-quote-and-verse-blocks t)
+
+;; Change the *, - used in lists for --> •
+(font-lock-add-keywords 'org-mode
+                          '(("^ *\\([-]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+#+end_src
+ 
+** Heading sizes/Custom faces
+All the headings have the same size. Also the text is not aligned with
+his heading by default so to change the heading sizes and align the
+text with the corresponding header.
+*** Custom headings
+I'd like to headers have different sizes according of the level they
+are placed.
+
 #+begin_src emacs-lisp
 ;; Configurar estilos para los niveles de encabezados
-(dolist (level '((1 . 1.4) (2 . 1.2) (3 . 1.1) (4 . 1.0) (5 . 0.9)))
-  (set-face-attribute (intern (format "org-level-%d" (car level))) nil
-		      :inherit (intern (format "outline-%d" (car level)))
-		      :height (cdr level)))
+;; (with-eval-after-load "org"
+;;   (dolist (level '((1 . 1.2) (2 . 1.1) (3 . 1.0) (4 . 0.9) (5 . 0.8)))
+;;     (set-face-attribute (intern (format "org-level-%d" (car level))) nil
+;; 			:inherit (intern (format "outline-%d" (car level)))
+;; 			:height (cdr level)))
 
-;; Config de estilo para el titulo del documento org
-(set-face-attribute 'org-document-title nil :height 2.0)
+;;   ;; Config de estilo para el titulo del documento org
+;;   (set-face-attribute 'org-document-title nil :height 1.3)
+;;   (set-face-attribute 'org-todo nil :height 1.2))
 
-;; Ajustar el texto a su encabezado
-;; (defun my/write-prose ()
-;;   (variable-pitch-mode 0)
-;;   (set-face-attribute 'org-indent nil :inherit '(org-hide variable-pitch))
-;;   (set-face-attribute 'org-hide nil :inherit 'fixed-pitch))
+;; (setq org-num-skip-unnumbered t)
 
-;; (add-hook 'org-mode-hook #'my/write-prose)
+;; I'm using org bullets check that configuration in the packages section
 #+end_src
 
-*** Custom face for code blocks
-Also you can configure how code blocks look like with custom-set-faces or
-set-face-attribute
+*** Custom faces for org mode
+Also you can configure how code blocks look like with custom-set-faces
+or set-face-attribute
+
 #+begin_src emacs-lisp
-(set-face-attribute 'org-block nil
-                    :extend t
-		    :foreground "foreground" ;;foreground "#ffb86c"
-                    :slant 'italic)
+;; (with-eval-after-load "org"
+;;   (set-face-attribute 'org-block-begin-line nil
+;; 		      :extend t
+;; 		      :overline "foreground"
+;; 		      :underline nil; '(:color foreground-color :style line :position t) 
+;; 		      :slant 'italic
+;; 		      :weight 'bold)
 
-(set-face-attribute 'org-block-begin-line nil
-                    :extend t
-                    :overline "foreground"
-                    :underline '(:color foreground-color :style line :position t)
-                    :slant 'italic
-                    :weight 'bold)
-
-(set-face-attribute 'org-block-end-line nil
-                    :inherit 'org-block-begin-line
-                    :extend t
-                    :overline nil
-                    :underline '(:color foreground-color :style line :position t))
+;;   (set-face-attribute 'org-block-end-line nil
+;; 		      :inherit 'org-block-begin-line
+;; 		      :slant 'italic
+;; 		      :extend t
+;; 		      :overline nil
+;; 		      :underline t));'(:color foreground-color :style line :position t)))
 
 ;;Using custom-set-faces
 ;; (custom-set-faces
 ;;  '(org-block ((t (:extend t :foreground "#ffb86c" :slant italic))))
 ;;  '(org-block-begin-line ((t (:inherit org-meta-line :extend t :overline "foreground" :underline (:color foreground-color :style line :position t) :slant italic :weight bold))))
 ;;  '(org-block-end-line ((t (:inherit org-block-begin-line :extend t :overline nil :underline (:color foreground-color :style line :position t))))))
-
 #+end_src
 
 *** Mixed fonts
+For writing prose I like a proportional face font that's why
+=variable-pitch-mode= is enabled, the only downside is that code
+blocks and other elements like =org-tables, lists, tags, quotes,
+links, etc= look like shit, to resolve this you can set a font for the
+fixed-pitch-face and with ~custom-set-faces~ set all the org faces to
+inherit to that face. /Also you can do it with =set-face-attribute= ./
+
+/note: the =org-hide= face is there because setting this to inherit the
+fixed-pitch face, doesn't break the indentation when activating =org-indent-mode=./
+[[https://emacs.stackexchange.com/questions/26864/variable-pitch-face-breaking-indentation-in-org-mode][I get that fix from here]]
+
 #+begin_src emacs-lisp
-(set-face-attribute 'variable-pitch nil :family "Noto Sans" :height 1.0)
-(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 1.0)
-;;(set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font" :height 0.9)
+;; (with-eval-after-load "org"
+;;   (dolist (face '(org-block org-table org-list-dt org-tag
+;; 			    org-todo org-checkbox
+;; 			    org-hide))
+;;     (set-face-attribute face nil :inherit 'fixed-pitch))
+;;   (dolist (face1 '(org-document-info-keyword org-meta-line))
+;;     (set-face-attribute face1 nil :inherit '(shadow fixed-pitch))))
+
+;; I use custom-set-faces because doing it with the
+;; code above will not maitain the fixed pitch after
+;; loading a theme
 
 (custom-set-faces
  '(org-block ((t (:inherit fixed-pitch))))
  '(org-table ((t (:inherit fixed-pitch))))
  '(org-list-dt ((t (:inherit fixed-pitch))))
- '(org-list-dd ((t (:inherit fixed-pitch))))
  '(org-tag ((t (:inherit fixed-pitch))))
- '(org-quote ((t (:inherit fixed-pitch))))
- '(org-code ((t (:inherit fixed-pitch))))
- '(org-link ((t (:inherit fixed-pitch))))
- '(org-toc ((t (:inherit fixed-pitch))))
- '(org-formula ((t (:inherit fixed-pitch))))
- '(org-verbatim ((t (:inherit fixed-pitch))))
- '(org-strike ((t (:inherit fixed-pitch))))
+ '(org-todo ((t (:inherit fixed-pitch))))
  '(org-checkbox ((t (:inherit fixed-pitch))))
- '(org-list ((t (:inherit fixed-pitch))))
- '(org-meta-line ((t (:inherit fixed-pitch)))))
+ '(org-hide ((t (:inherit fixed-pitch)))))
 
-(add-hook 'org-mode-hook 'variable-pitch-mode)
+(defun org-startup-hooks ()
+  (org-indent-mode)
+  (variable-pitch-mode)
+  (visual-line-mode))
+
+(add-hook 'org-mode-hook #'org-startup-hooks)
 #+end_src
 
-* Tree-Sitter
+* Tree-Sitter.
 #+begin_src emacs-lisp
+(use-package treesit
+  :init
+  (setq treesit-font-lock-level 4))
+
 (add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode))
+(add-to-list 'treesit-language-source-alist
+	     '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
+	     '(tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")))
+
 (setq major-mode-remap-alist
       '((c-mode . c-ts-mode)
 	(c++-mode . c++-ts-mode)
@@ -324,108 +662,278 @@ set-face-attribute
 	(conf-toml-mode . toml-ts-mode)))
 #+end_src
 
+* Languages configurations.
+** C-like languages
+Better syntax highlighting for c likes languages. I added this one
+because of Emacs syntax highlighting don't support Emacs so this one
+add to the font lock function calls operators and brackets.  The code
+was extracted from [[https://emacs.stackexchange.com/questions/16750/better-syntax-higlighting-for-member-variables-and-function-calls-in-cpp-mode][here]].
+
+#+begin_src emacs-lisp
+;; C-Like
+(dolist (mode-iter '(c-mode c++-mode c-ts-mode c++-ts-mode glsl-mode java-mode javascript-mode rust-mode))
+  (font-lock-add-keywords
+    mode-iter
+    '(("\\([~^&\|!<>=,.\\+*/%e-]\\)" 0 'font-lock-operator-face keep)))
+  (font-lock-add-keywords
+    mode-iter
+    '(("\\([\]\[}{)(:;]\\)" 0 'font-lock-delimit-face keep)))
+  ;; functions
+  (font-lock-add-keywords
+    mode-iter
+    '(("\\([_a-zA-Z][_a-zA-Z0-9]*\\)\s*(" 1 'font-lock-function-name-face keep))))
+#+end_src
+** Javascript/Typescript
+#+begin_src emacs-lisp
+(setq js-indent-level 2) ;; set indentation on js jsx, ts, tsx files to 2
+#+end_src
+
 * Keybindings
 ** Windows
-This keybindings remaps some basics keys for managing windows in emacs (reseize, new windows, etc)
-To resize windows you only can enlarge a window (vertical), make it wider or narrower.
-- `c-x ^' makes the current window talle (`enlarge-window')
-- `C-x }' makes it wider (‘enlarge-window-horizontally’)
-- `C-x {' makes it narrower (‘shrink-window-horizontally’)
+This keybindings remaps some basics keys for managing windows in Emacs
+(resize, new windows, etc) To resize windows you only can enlarge a
+window (vertical), make it wider or narrower.
+- =c-x ^= makes the current window taller (~enlarge-window~)
+- =C-x }= makes it wider (~enlarge-window-horizontally~)
+- =C-x {= makes it narrower (~shrink-window-horizontally~)
 
-I remap those commands and using repeat mode to custom de repeat map to those command,
-with ~global-set-key~ I create the new maps for managing the size of windows inside emacs and
-nwith ~defvar resize-window-repeat-map~ define  a set of maps that repeated with activate a command.
-Also with ~(put 'command 'repeat-map  'maps-defined-earlier)~ you asigns those maps to the
-repeat maps that =repeat-mode= uses.
+I remap those commands and using repeat mode to custom repeat map
+to those command, with ~global-set-key~ I create the new maps for
+managing the size of windows inside Emacs and with ~defvar
+resize-window-repeat-map~ define  a set of maps that repeated with
+activate a command, Also with ~(put 'command 'repeat-map
+'maps-defined-earlier)~ you assign's those maps to the repeat maps that
+=repeat-mode= uses.
 
-I also remap the comands to create new windows to ones of my linking, trying to not leave the home row
-to much or at least stay more close to it.
+I also remap the commands to create new windows to ones of my linking,
+trying to not leave the home row to much or at least stay more close
+to it.
 
-Emacs can create windows sensibly, thats controlled by a funcion called ~split-window-sensibly~ this function
-is called for example when you do =find-file-other-window= so it can decide where to create the new window,
-for the function decided where to create a new window it uses 2 variables ~split-height-threshold~ and
-~split-width-threshold~ to check if the current window has at least n columns or lines to be suitable
-to create a new window, /if you know more on how in works you can get into detail checking the documetation of the
-function/, in a nutshell if ~split-height-threshold~ is setted to a low value the new window will be opened below
-the current windows, something similar happens with ~split-width-threshold~ but if this one is setted to a low value
-/(like 50 I think)/ the new window it'll be opened to the left of the current window.
+Emacs can create windows sensibly, that's controlled by a function
+called ~split-window-sensibly~ this function is called for example
+when you do =find-file-other-window= so it can decide where to create
+the new window, for the function decided where to create a new window
+it uses 2 variables ~split-height-threshold~ and
+~split-width-threshold~ to check if the current window has at least n
+columns or lines to be suitable to create a new window, /if you want to know
+more on how in works you can get into detail checking the documentation/
+of the function, in a nutshell if ~split-height-threshold~ is set
+to a low value the new window will be opened below the current
+windows, something similar happens with ~split-width-threshold~ but if
+this one is set to a low value /(like 50 I think)/ the new window
+it'll be opened to the left of the current window.
 
 #+begin_src emacs-lisp
-  (repeat-mode 1)
+(repeat-mode 1)
+(global-set-key (kbd "C-x w t") 'enlarge-window) ;; t for taller
+(global-set-key (kbd "C-x w s") 'shrink-window)  ;; s for shrink
+(global-set-key (kbd "C-x w n") 'shrink-window-horizontally) ;; n for narrow
+(global-set-key (kbd "C-x w e") 'enlarge-window-horizontally) ;; e for enlarge
 
-;;  (setq split-width-threshold 100)
-  (global-set-key (kbd "C-x w t") 'enlarge-window) ;; t for taller
-  (global-set-key (kbd "C-x w s") 'shrink-window)  ;; s for shrink
-  (global-set-key (kbd "C-x w n") 'shrink-window-horizontally) ;; n for narrow
-  (global-set-key (kbd "C-x w e") 'enlarge-window-horizontally) ;; e for enlarge
-
-  (defun my/create-new-window (direction)
-    "Create a new window based on DIRECTION if DIRECTION is 'vertical, do
+(defun my/create-new-window (direction)
+  "Create a new window based on DIRECTION if DIRECTION is 'vertical, do
     split-window-horizontally (new window on the on the right), otherwise do
     split-window-vertically (new window bellow) and move the cursor to that window."
-    (interactive "sDirection (h for horizontal, v for vertical): ")
-    (let ((split-func
-	   (if (string= direction "v")
-	       #'split-window-horizontally
-	     (if (string= direction "h")
-		 #'split-window-vertically
-	       nil))))
-      (when split-func
-	(funcall split-func)
-	(other-window 1))))
+  (interactive "sDirection (h for horizontal, v for vertical): ")
+  (let ((split-func
+	 (if (string= direction "v")
+	     #'split-window-horizontally
+	   (if (string= direction "h")
+	       #'split-window-vertically
+	     nil))))
+    (when split-func
+      (funcall split-func)
+      (other-window 1))))
 
-  (global-set-key (kbd "C-c wl") (lambda () (interactive) (my/create-new-window "v"))) ;; Create window on the right
-  (global-set-key (kbd "C-c wd") (lambda () (interactive) (my/create-new-window "h"))) ;; Create window below
-  (global-set-key (kbd "C-c fow") #'ido-find-file-other-window) ;; Find file in other window file-other-window
-  (global-set-key (kbd "C-c dow") #'ido-dired-other-window) ;; Open dired in other window; dired-other-window
-  (global-set-key (kbd "C-c cow") #'delete-other-windows) ;; Delete all the windows except the current window; close-other-windows
-  (global-set-key (kbd "C-c wc") #'delete-window) ;; Close current window; window-close
-  (global-set-key (kbd "M-o") #'other-window) ;; Change other window
-  (global-set-key (kbd "C-c bow") #'ido-switch-buffer-other-window)
+(global-set-key (kbd "C-c wr") '("split-window-right" . (lambda () (interactive) (my/create-new-window "v")))) ;; Create window on the right
+(global-set-key (kbd "C-c wd") '("split-window-bellow" . (lambda () (interactive) (my/create-new-window "h")))) ;; Create window below
+(global-set-key (kbd "C-c wq") #'delete-other-windows) ; Deleted all the windows except the current window
+(global-set-key (kbd "C-c wc") '("close window" . delete-window)) ; Close current window
 
-  (defvar my/resize-window-repeat-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map "t" 'enlarge-window)
-      (define-key map "s" 'shrink-window)
-      (define-key map "n" 'shrink-window-horizontally)
-      (define-key map "e" 'enlarge-window-horizontally)
-      map)
-    "Keymap to repeat resize window key sequences.")
+(defun prev-window ()
+  "Jump to the previous window (to the left)"
+  (interactive)
+  (other-window -1))
 
-  (dolist (cmd '(enlarge-window shrink-window shrink-window-horizontally enlarge-window-horizontally))
-    (put cmd 'repeat-map 'my/resize-window-repeat-map))
+(global-set-key (kbd "M-o") #'other-window) ; Move cursor to window on the rigth
+(global-set-key (kbd "M-O") #'prev-window)  ; Move cursor to window of the left
+
+(global-set-key (kbd "C-c w b") #'switch-to-buffer-other-window) ; Switch buffers in another window
+(global-set-key (kbd "C-c w f") #'find-file-other-window) ;; Find file in other window file-other-window
+(defvar my/resize-window-repeat-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "t" 'enlarge-window)
+    (define-key map "s" 'shrink-window)1
+    (define-key map "n" 'shrink-window-horizontally)
+    (define-key map "e" 'enlarge-window-horizontally)
+    map)
+  "Keymap to repeat resize window key sequences.")
+
+(dolist (cmd '(enlarge-window shrink-window shrink-window-horizontally enlarge-window-horizontally))
+  (put cmd 'repeat-map 'my/resize-window-repeat-map))
 
 #+end_src
 
-* Speed Bar
-Recently discover that emacs has a file tree integrated in emacs called speedbar is a little bit ugly
-and it opens in another frame, so you can install a package called sr-speedbar that integrates
-speedbar inside the emacs frame.
+** Some other useful commands
+This ones don't have a category to put them yet, so this section works like a all things drawer but for key maps
 #+begin_src emacs-lisp
-;; (use-package sr-speedbar
-;;   :ensure t)
+  (global-set-key (kbd "C-. p") #'previous-buffer)
+  (global-set-key (kbd "C-. n") #'next-buffer)
 
-(setq speedbar-show-unknown-files t)
-(setq sr-speedbar-width 30
-      sr-speedbar-skip-other-window-p t)
-
-;; To open move the cursor to the file you opened
-(with-eval-after-load 'sr-speedbar
-  (advice-add 'sr-speedbar-open :after
-              #'(lambda ()
-                  ;; Remove weird sr-speedbar hooks
-                  (remove-hook 'speedbar-before-visiting-file-hook #'sr-speedbar-before-visiting-file-hook)
-                  (remove-hook 'speedbar-before-visiting-tag-hook #'sr-speedbar-before-visiting-tag-hook)
-                  (remove-hook 'speedbar-visiting-file-hook #'sr-speedbar-visiting-file-hook)
-                  (remove-hook 'speedbar-visiting-tag-hook #'sr-speedbar-visiting-tag-hook))))
-
-(add-hook 'emacs-startup-hook (lambda ()
-  (sr-speedbar-open)
-  ))
-
-(global-set-key (kbd "C-M-0") 'sr-speedbar-toggle)
-(global-set-key (kbd "M-0") 'sr-speedbar-select-window)
-;; To keep speebar window width after resizing
-;; (with-current-buffer sr-speedbar-buffer-name
-;;   (setq window-size-fixed 'width))
+  (global-set-key (kbd "C-c d") #'duplicate-dwim) ; Duplicate current line
+  (global-set-key [remap dabbrev-expand] 'hippie-expand) ; Change dabbrev-expand for hippie-expand
+  (global-set-key (kbd "C-x C-b") 'ibuffer) ; Change `list-buffer' for `ibuffer'
 #+end_src
+
+* Packages
+This is section is for the configuration and installation of packages, before I just to have a section for each package, since now I'm using =use-package= so I just move those sections to a subsection in here.
+
+** Which Key
+Which key is a help for when you know the key combinations of certain
+commands so when you type a key that is part of a conjunction of keys
+for a command which key will show you a window in the bottom of the
+screen showing you the key combinations to do a command. Very useful
+if you are new to Emacs. 
+
+#+begin_src emacs-lisp
+(use-package which-key
+  :ensure t
+  :config
+  (which-key-mode)
+  (which-key-setup-side-window-bottom))
+#+end_src
+
+** Company Mode
+Provides a little popup for auto completion like and IDE or vs code or Kate.
+
+#+begin_src emacs-lisp
+(use-package company
+  :ensure t)
+
+(add-hook 'after-init-hook 'global-company-mode)
+(with-eval-after-load 'company
+  (define-key company-active-map (kbd "M-/") #'company-complete))
+(with-eval-after-load 'company-complete
+  (define-key company-active-map
+	      (kbd "TAB")
+	      #'company-complete-common-or-cycle)
+  (define-key company-active-map
+	      (kbd "<backtab>")
+	      (lambda ()
+		(interactive)
+		(company-complete-common-or-cycle -1))))
+(with-eval-after-load 'company
+  (define-key company-active-map (kbd "M-.") #'company-show-location)
+  (define-key company-active-map (kbd "RET") nil))
+#+end_src
+  
+** Dashboard
+A very pretty dashboard that receives you at Emacs startup
+
+#+begin_src emacs-lisp
+;; (use-package dashboard
+;;   :ensure t
+;;   :init
+;;   (progn
+;;     ;; (setq dashboard-items '((recents . 5)
+;;     ;; 			    (projects . 5)
+;;     ;; 			    (agenda . 5)))
+;;     (setq dashboard-center-content t)
+;;     (setq dashboard-set-file-icons t)
+;;     (setq dashboard-set-heading-icons t)
+;;     (setq dashboard-startup-banner 'official)
+;;     (setq dashboard-projects-backend 'project-el)
+;;     ;; (setq dashboard-projects-switch-function 'project-find-file)
+;;     )
+;;   :config
+;;   (dashboard-setup-startup-hook))
+
+(use-package dashboard
+  :config
+  (dashboard-setup-startup-hook)
+  (setq dashboard-force-refresh t)
+  :custom
+  (dashboard-center-content t)
+  (dashboard-banner-logo-title nil)
+  (dashboard-vertically-center-content t)
+  (dashboard-hide-cursor t)
+  (dashboard-items nil))
+#+end_src
+
+** Nerd Icons
+Remember to do =M-x nerd-icons-install-fonts= to install all the icons.
+
+#+begin_src emacs-lisp
+(use-package nerd-icons :ensure t)
+
+;; Nerd Icons Dired
+(use-package nerd-icons-dired
+  :ensure t
+  :hook (dired-mode . nerd-icons-dired-mode))
+#+end_src
+
+** Rainbow Delimiters
+This puts colors to all the delimiters.
+
+#+begin_src emacs-lisp
+(use-package rainbow-delimiters
+  :ensure t
+  :hook (prog-mode . rainbow-delimiters-mode))
+#+end_src
+
+** Delight
+#+begin_src emacs-lisp
+(use-package delight
+  :ensure t
+  :delight
+  (which-key-mode nil)
+  (company-mode nil)
+  (org-num-mode nil org-num)
+  (org-indent-mode nil "org-indent")
+  (eldoc-mode " eldoc" "eldoc"))
+#+end_src
+** Dev related packages
+#+begin_src emacs-lisp
+(use-package yasnippet
+  :ensure t
+  :config
+  (yas-global-mode 1))
+
+(use-package yasnippet-snippets
+  :ensure t)
+#+end_src
+
+** Web Dev related packages
+#+begin_src emacs-lisp
+(use-package emmet-mode  :ensure t)
+
+(use-package rjsx-mode  :ensure t)
+
+(use-package vue-ts-mode
+  :init
+  (add-to-list 'load-path (concat user-emacs-directory "lisp/vue-ts-mode")))
+#+end_src
+
+** Org Appear
+#+begin_src emacs-lisp
+(use-package org-appear :ensure t)
+#+end_src
+
+** hl-todo
+#+begin_src emacs-lisp
+(use-package hl-todo
+       :ensure t
+       :custom-face
+       (hl-todo ((t (:inherit hl-todo :italic t))))
+       :hook ((prog-mode . hl-todo-mode)
+              (yaml-mode . hl-todo-mode)))
+#+end_src
+* Aspell
+To have spell checking in emacs /remember to install ispell or gnu-aspell in your system/
+#+begin_src emacs-lisp
+(setq-default ispell-program-name "aspell")
+#+end_src
+
+
+
+
