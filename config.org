@@ -103,7 +103,7 @@ This helps with load time since no extra libraries are loaded.
 (setq initial-major-mode 'fundamental-mode)
 #+end_src
 
-**  UI related settings
+** UI related settings
 By changing some UI settings at this early stage you can save time for when the frame is draw on the
 scree, and also avoid the initial famous flash of light.
 
@@ -143,7 +143,7 @@ can enabled at startup, just to be disabled by your config later. So
 we disabled before the init file is loaded so the frame load as this
 UI elements never be there (also they look bad).
 
-#+begin_src emacs-lisp :ptangle "early-init.el"
+#+begin_src emacs-lisp :tangle "early-init.el"
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
@@ -152,7 +152,7 @@ UI elements never be there (also they look bad).
 ;;(set-face-attribute 'default nil :background "#000000" :foreground "#ffffff")
 #+end_src
 
-** Initialize package manager and end or early-init.el
+** Initialize package manager
 Initialize installed packages at this early stage, by using the available cache .
 I had tried a setup with this set to nil in the early-init.el, but (i) it ended up being slower and
 (ii) various package commands, like =describe-package=, did not have an index of
@@ -162,7 +162,6 @@ packages to work with, requiring a =package-refresh-contents=.
 (setq package-enable-at-startup t)
 
 (provide 'early-init)
-
 ;;; early-init.el ends here
 #+end_src
 
@@ -175,6 +174,10 @@ want more packages MELPA is good for that, since most of the popular
 packages are there.
 
 #+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Package Management
+;; -----------------------------------------------------------------------------
+
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (unless package--initialized (package-initialize))
@@ -532,6 +535,7 @@ Org-mode by default is a little bit annoying in some areas so the next
 code its mean to "fix" them.
 
 #+begin_src emacs-lisp
+
 (setq org-src-preserve-indentation t	;Preserva indentacion original
       org-edit-src-content-indentation 0 ;No agregar indentacion adicional
       org-src-tab-acts-natively t	 ; Usa la tecla tab para indentar codigo
@@ -554,52 +558,26 @@ code its mean to "fix" them.
 All the headings have the same size. Also the text is not aligned with
 his heading by default so to change the heading sizes and align the
 text with the corresponding header.
+
 *** Custom headings
 I'd like to headers have different sizes according of the level they
 are placed.
 
 #+begin_src emacs-lisp
 ;; Configurar estilos para los niveles de encabezados
-;; (with-eval-after-load "org"
-;;   (dolist (level '((1 . 1.2) (2 . 1.1) (3 . 1.0) (4 . 0.9) (5 . 0.8)))
-;;     (set-face-attribute (intern (format "org-level-%d" (car level))) nil
-;; 			:inherit (intern (format "outline-%d" (car level)))
-;; 			:height (cdr level)))
+(with-eval-after-load "org"
+  (dolist (level '((1 . 1.2) (2 . 1.1) (3 . 1.0) (4 . 0.9) (5 . 0.8)))
+    (set-face-attribute (intern (format "org-level-%d" (car level))) nil
+			:inherit (intern (format "outline-%d" (car level)))
+			:height (cdr level)))
 
-;;   ;; Config de estilo para el titulo del documento org
-;;   (set-face-attribute 'org-document-title nil :height 1.3)
-;;   (set-face-attribute 'org-todo nil :height 1.2))
+  ;; Config de estilo para el titulo del documento org
+  (set-face-attribute 'org-document-title nil :height 1.3)
+  (set-face-attribute 'org-todo nil :height 1.2))
 
-;; (setq org-num-skip-unnumbered t)
+(setq org-num-skip-unnumbered t)
 
 ;; I'm using org bullets check that configuration in the packages section
-#+end_src
-
-*** Custom faces for org mode
-Also you can configure how code blocks look like with custom-set-faces
-or set-face-attribute
-
-#+begin_src emacs-lisp
-;; (with-eval-after-load "org"
-;;   (set-face-attribute 'org-block-begin-line nil
-;; 		      :extend t
-;; 		      :overline "foreground"
-;; 		      :underline nil; '(:color foreground-color :style line :position t) 
-;; 		      :slant 'italic
-;; 		      :weight 'bold)
-
-;;   (set-face-attribute 'org-block-end-line nil
-;; 		      :inherit 'org-block-begin-line
-;; 		      :slant 'italic
-;; 		      :extend t
-;; 		      :overline nil
-;; 		      :underline t));'(:color foreground-color :style line :position t)))
-
-;;Using custom-set-faces
-;; (custom-set-faces
-;;  '(org-block ((t (:extend t :foreground "#ffb86c" :slant italic))))
-;;  '(org-block-begin-line ((t (:inherit org-meta-line :extend t :overline "foreground" :underline (:color foreground-color :style line :position t) :slant italic :weight bold))))
-;;  '(org-block-end-line ((t (:inherit org-block-begin-line :extend t :overline nil :underline (:color foreground-color :style line :position t))))))
 #+end_src
 
 *** Mixed fonts
@@ -634,7 +612,9 @@ fixed-pitch face, doesn't break the indentation when activating =org-indent-mode
  '(org-tag ((t (:inherit fixed-pitch))))
  '(org-todo ((t (:inherit fixed-pitch))))
  '(org-checkbox ((t (:inherit fixed-pitch))))
- '(org-hide ((t (:inherit fixed-pitch)))))
+ '(org-hide ((t (:inherit fixed-pitch))))
+ '(org-block-begin-line ((t (:extend t :overline "foreground" :slant italic))))
+ '(org-block-end-line ((t (:extend t :overline nil :underline (:color foreground-color :style line :position t))))))
 
 (defun org-startup-hooks ()
   (org-indent-mode)
