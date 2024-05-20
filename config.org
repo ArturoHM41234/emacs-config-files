@@ -1,3 +1,4 @@
+# -*- lexical-binding: t; -*-
 #+title:	Literate configuration for Emacs
 #+author:	Arturo Hernandez Moreno
 #+property:	header-args :results silent :tangle "~/.config/emacs/init.el"
@@ -174,10 +175,10 @@ want more packages MELPA is good for that, since most of the popular
 packages are there.
 
 #+begin_src emacs-lisp
+;; -*- lexical-binding: t -*-
 ;; -----------------------------------------------------------------------------
 ;; Package Management
 ;; -----------------------------------------------------------------------------
-
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (unless package--initialized (package-initialize))
@@ -216,47 +217,39 @@ at startup Emacs always ask for confirmation to load the theme so the
 =t= is for not asking confirmation to load the theme.
 
 #+begin_src emacs-lisp
-    (defun my/change-cursor-color ()
-      "Change the color of the cursor to white
+;; -----------------------------------------------------------------------------
+;; Appearance (themes)
+;; -----------------------------------------------------------------------------
+(defun my/change-cursor-color ()
+  "Change the color of the cursor to white
 	 when the theme is a dark theme"
-      (let* ((color-mode (frame-parameter nil 'background-mode))
-	     (cursor-color (if (eq color-mode 'dark)
-			       "white"
-			     nil)))
-	(set-face-attribute 'cursor nil :background cursor-color)))
+  (let* ((color-mode (frame-parameter nil 'background-mode))
+	 (cursor-color (if (eq color-mode 'dark)
+			   "white"
+			 nil)))
+    (set-face-attribute 'cursor nil :background cursor-color)))
 
-    (defvar after-enable-theme-hook nil
-      "Hook to run after enabling a theme.")
-
-    (defun run-after-enable-theme-hook (&rest _args)
-      "Run `after-enable-theme-hook'."
-      (run-hooks 'after-enable-theme-hook)
-      (my/change-cursor-color))
-
-    (advice-add 'enable-theme :after #'run-after-enable-theme-hook)
-    (add-hook 'after-init-hook #'run-after-enable-theme-hook)
-
-    (defun my/load-theme (theme)
-      "Custom `load-theme' function.
+(defun my/load-theme (theme)
+  "Custom `load-theme' function.
   This function disable all other themes you may have enabled"
-      (interactive
-       (list
-	(intern (completing-read "Load custom theme: "
-				 (mapcar #'symbol-name
-					 (custom-available-themes))))))
-      (if theme
-	  (progn
-	    (load-theme theme t)
-	    (mapc #'disable-theme (cdr custom-enabled-themes)))
-	(message "A theme is needed"))
+  (interactive
+   (list
+    (intern (completing-read "Load custom theme: "
+			     (mapcar #'symbol-name
+				     (custom-available-themes))))))
+  (if theme
+      (progn
+	(load-theme theme t)
+	(mapc #'disable-theme (cdr custom-enabled-themes)))
+    (message "A theme is needed"))
 
-      (customize-save-variable 'custom-enabled-themes custom-enabled-themes))
+  (customize-save-variable 'custom-enabled-themes custom-enabled-themes))
 
-    ;;(setq modus-themes-mixed-fonts t)
-    ;; Transparent background
-    ;;(set-frame-parameter nil 'alpha-background 90)
-    ;;(add-to-list 'default-frame-alist '(alpha-background . 90))
-#+end_src
+;;(setq modus-themes-mixed-fonts t)
+;; Transparent background
+;;(set-frame-parameter nil 'alpha-background 90)
+;;(add-to-list 'default-frame-alist '(alpha-background . 90))
+      #+end_src
 
 Remember if you have a theme enabled and you want to test other themes
 with =load-theme= be aware that Emacs can enable multiple themes at
@@ -279,7 +272,9 @@ you want to know more there's a wiki page about it.
 [[https://www.emacswiki.org/emacs/SetFonts]]
 
 #+begin_src emacs-lisp
-;; Default font
+;; -----------------------------------------------------------------------------
+;; Fonts and faces
+;; -----------------------------------------------------------------------------
 (set-face-attribute 'default nil
 		    :font "Input Mono Narrow 11")
 
@@ -294,14 +289,12 @@ you want to know more there's a wiki page about it.
 		    :font "Input Sans Narrow 16" ; "Fira Sans" ; "Input Sans Narrow"
 		    :weight 'light)
 
-
 ;; If you want to use a proportional font and
 ;; relative line numbers you will experience some
 ;; stuttering in lines, this is solved by using a
 ;; monospaced font for the line-number face.
 
 ;; (set-face-attribute 'line-number nil :inherit 'fixed-pitch :weight 'regular)
-
 #+end_src
 
 ** Behavior customizations
@@ -317,22 +310,26 @@ you can do =M-x global-display-line-numbers-mode=.
 You can have types of line numbers I prefer relative line numbers.
 
 #+begin_src emacs-lisp
-(setq display-line-numbers-type 'relative) ;'relative, 'visual, t -> for absolute line numbers
-
-(add-hook 'prog-mode-hook 'display-line-numbers-mode) ;
-
-(line-number-mode -1)		    ; Prevent line numbers from appearing in the mode line 
-(column-number-mode 1)		    ; Display columns in the mode line
-
-(setq truncate-lines t		     ; Disable word wrapping
-      mode-line-percent-position nil) ; Remove the legend in the mode line that indicates the percentage of where are in the file
+;; -----------------------------------------------------------------------------
+;; Behavior customization
+;; -----------------------------------------------------------------------------
+;; Line and column numbers and lines
+;; -------------------------------------------------------
+(line-number-mode -1)                     ; Prevent line numbers from appearing in the mode line 
+(column-number-mode 1)                    ; Display columns in the mode line
+(setq display-line-numbers-type 'relative ; 'relative, 'visual, t -> for absolute line numbers
+ truncate-lines t                         ; Disable word wrapping
+      mode-line-percent-position nil)     ; Remove the legend in the mode line that indicates the percentage of where are in the file
 #+end_src
 
-*** Fundamental Movement Keys
+*** Add new line with =c-n=
 Make that =c-n= add a new line whe the cursor is at the end of the
 buffer.
 
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Add new lines with C-n
+;; -------------------------------------------------------
 (setq next-line-add-newlines t)
 #+end_src
 
@@ -345,6 +342,9 @@ type of cursor according to the major mode. In this case set the bar for
 org mode buffers and the block for everything else.
 
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; The cursor
+;; -------------------------------------------------------
 (defun my/change-cursor-type ()
   "Change the cursor type, according the major-mode"
   (let ((cursor_type
@@ -352,9 +352,6 @@ org mode buffers and the block for everything else.
 	     'box
 	   'bar)))
     (setq cursor-type cursor_type)))
-
-
-(add-hook 'org-mode-hook #'my/change-cursor-type)
 #+end_src
 
 *** Delimiters (parentheses, brackets and braces).
@@ -373,6 +370,9 @@ overlay or a child frame respectively.
 Electric pair mode is a mode to have automatic closing symbols /{},[],"",'',()/.
 
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Delimiters
+;; -------------------------------------------------------
 (show-paren-mode 1)
 (setq show-paren-context-when-offscreen 'overlay)
 (electric-pair-mode 1)
@@ -431,6 +431,9 @@ them have some similarities but differ in some other areas.
    and =C-p= to select the one you want.
 
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Completion
+;; -------------------------------------------------------
 (setq-default confirm-nonexistent-file-or-buffer nil) ;; nil means don't confirm when visiting a new file or buffer
 (fido-vertical-mode 1)
 #+end_src
@@ -439,16 +442,23 @@ them have some similarities but differ in some other areas.
 The title is pretty straight forward.
 
 #+begin_src emacs-lisp
-(setq make-backup-files nil		; Deactivates the Creation of backup files
-      backup-inhibited t)		; Don't backup
-(global-auto-revert-mode 1)		; Auto "update" the buffers if the file change in disk
-(setq global-auto-revert-non-file-buffers t) ; Revert buffers like dired
+;; -------------------------------------------------------
+;; Backup files
+;; -------------------------------------------------------
+(setq make-backup-files nil                     ; Desactiva la creación de archivos de respaldo
+      backup-inhibited t)                       ; No hace respaldo
+(global-auto-revert-mode 1)                     ; Actualiza automáticamente los buffers si el archivo cambia en disco
+(setq global-auto-revert-non-file-buffers t)    ; Revierte buffers como dired
+
 #+end_src
 
 *** Save place and change the "customization location"
 Remember the last place you visited in a file.
 
-#+begin_src Emacs-lisp
+#+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; The custom file
+;; -------------------------------------------------------
 (save-place-mode 1)
 #+end_src
 
@@ -461,10 +471,26 @@ so.
 (load custom-file 't)
 #+end_src
 
-*** Copy whole lines
+*** Search
+Show the current match number and the total number of matches in the search prompt.
+
+#+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Search
+;; -------------------------------------------------------
+(setq isearch-lazy-count t)
+#+end_src
+*** User defined functions
+**** Copy whole lines
 This code is extracted from the emacs wiki:  [[https://www.emacswiki.org/emacs/CopyingWholeLines#h5o-13][Copy whole lines without selection (ctrl-spc)]]
 #+begin_src emacs-lisp
-;; Copy whole lines without marking the region to copy
+;; -----------------------------------------------------------------------------
+;; User defined function
+;; -----------------------------------------------------------------------------
+
+;; -------------------------------------------------------
+;; Copy whole line
+;; -------------------------------------------------------
 (defun copy-region-or-lines (n &optional beg end)
   "Copy region or the next N lines into the kill ring.
   When called repeatedly, move to the next line and append it to
@@ -476,9 +502,10 @@ This code is extracted from the emacs wiki:  [[https://www.emacswiki.org/emacs/C
           (if repeatp
 	      ;;These lambda functions execute the copying
               #'(lambda (b e) (kill-append (concat "\n" (buffer-substring b e)) nil)) ; This one executes if your repeatedly press M-w
-            #'(lambda (b e) (kill-ring-save b e (use-region-p))))) ; This one is the normal one
+            #'(lambda (b e) (kill-ring-save b e (use-region-p)))))                    ; This one is the normal one
          beg
          end)
+    
     ;; body and asigning values to the variables
     (if repeatp
         (let ((goal-column (current-column)))
@@ -499,14 +526,16 @@ This code is extracted from the emacs wiki:  [[https://www.emacswiki.org/emacs/C
 (global-set-key (kbd "M-w") 'copy-region-or-lines)
 #+end_src
 
-*** Copy a word
+**** Copy a word
 To copy a word without marking it with =C-spc=.
 
 #+begin_src emacs-lisp
-;; TODO: add that when you repeatedly press M-W append the next word to the copy sort like expand-region
-
+;; -------------------------------------------------------
+;; Copy word
+;; -------------------------------------------------------
 (defun copy-word ()
   "Copy word under the cursor."
+  ;; TODO: add that when you repeatedly press M-W append the next word to the copy sort like expand-region
   (interactive)
   (let ((symbol (thing-at-point 'symbol))
 	(bounds (bounds-of-thing-at-point 'symbol))
@@ -522,35 +551,33 @@ To copy a word without marking it with =C-spc=.
 (global-set-key (kbd "M-W") 'copy-word)
 #+end_src
 
-*** Search
-Show the current match number and the total number of matches in the search prompt.
-
-#+begin_src emacs-lisp
-(setq isearch-lazy-count t)
-#+end_src
 * Org mode
 ** Better defaults for org-mode
 Org-mode by default is a little bit annoying in some areas so the next
 code its mean to "fix" them.
 
 #+begin_src emacs-lisp
-
-(setq org-src-preserve-indentation t	;Preserva indentacion original
-      org-edit-src-content-indentation 0 ;No agregar indentacion adicional
-      org-src-tab-acts-natively t	 ; Usa la tecla tab para indentar codigo
-      org-src-fontify-natively t	 ; Resalta sintaxis en bloques de codigo
-      org-src-tab-indent t		 ; Indenta codigo con tab
-      org-hide-emphasis-markers t	 ; Hide the // ** markers that indicates bold, italics etc
-      org-bullets-bullet-list '(" ")	 ; No bullets, needs org-bullets package
-      org-pretty-entities t
+;; -----------------------------------------------------------------------------
+;; Org mode
+;; -----------------------------------------------------------------------------
+;; Better Defaults
+;; -------------------------------------------------------
+(setq org-src-preserve-indentation t      ; Preserva indentacion original
+      org-edit-src-content-indentation 0  ; No agregar indentacion adicional
+      org-src-tab-acts-natively t         ; Usa la tecla tab para indentar codigo
+      org-src-fontify-natively t          ; Resalta sintaxis en bloques de codigo
+      org-src-tab-indent t                ; Indenta codigo con tab
+      org-hide-emphasis-markers t         ; Hide the // ** markers that indicates bold, italics etc
+      org-bullets-bullet-list '(" ")      ; No bullets, needs org-bullets package
+      org-pretty-entities t               ; Show utf-8 characters
       org-fontify-whole-heading-line t
       org-fontify-done-headline t
       org-fontify-quote-and-verse-blocks t)
 
 ;; Change the *, - used in lists for --> •
 (font-lock-add-keywords 'org-mode
-                          '(("^ *\\([-]\\) "
-                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+                        '(("^ *\\([-]\\) "
+                           (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 #+end_src
  
 ** Heading sizes/Custom faces
@@ -563,14 +590,15 @@ I'd like to headers have different sizes according of the level they
 are placed.
 
 #+begin_src emacs-lisp
-;; Configurar estilos para los niveles de encabezados
+;; -------------------------------------------------------
+;; Custom headings
+;; -------------------------------------------------------
 (with-eval-after-load "org"
   (dolist (level '((1 . 1.2) (2 . 1.1) (3 . 1.0) (4 . 0.9) (5 . 0.8)))
     (set-face-attribute (intern (format "org-level-%d" (car level))) nil
 			:inherit (intern (format "outline-%d" (car level)))
 			:height (cdr level)))
 
-  ;; Config de estilo para el titulo del documento org
   (set-face-attribute 'org-document-title nil :height 1.3)
   (set-face-attribute 'org-todo nil :height 1.2))
 
@@ -592,6 +620,13 @@ fixed-pitch face, doesn't break the indentation when activating =org-indent-mode
 [[https://emacs.stackexchange.com/questions/26864/variable-pitch-face-breaking-indentation-in-org-mode][I get that fix from here]]
 
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Mixed fonts
+;; -------------------------------------------------------
+;; This is to have proportional fonts and monospaced fonts
+;; in org mode, note that the modus themes have options to
+;; make this more easy. This is for all themes.
+
 ;; (with-eval-after-load "org"
 ;;   (dolist (face '(org-block org-table org-list-dt org-tag
 ;; 			    org-todo org-checkbox
@@ -600,9 +635,8 @@ fixed-pitch face, doesn't break the indentation when activating =org-indent-mode
 ;;   (dolist (face1 '(org-document-info-keyword org-meta-line))
 ;;     (set-face-attribute face1 nil :inherit '(shadow fixed-pitch))))
 
-;; I use custom-set-faces because doing it with the
-;; code above will not maitain the fixed pitch after
-;; loading a theme
+;; I use custom-set-faces because doing it with the code above will
+;; not maitain the fixed pitch after loading a theme
 
 (custom-set-faces
  '(org-block ((t (:inherit fixed-pitch))))
@@ -615,16 +649,14 @@ fixed-pitch face, doesn't break the indentation when activating =org-indent-mode
  '(org-block-begin-line ((t (:extend t :overline "foreground" :slant italic))))
  '(org-block-end-line ((t (:extend t :overline nil :underline (:color foreground-color :style line :position t))))))
 
-(defun org-startup-hooks ()
-  (org-indent-mode)
-  (variable-pitch-mode)
-  (visual-line-mode))
 
-(add-hook 'org-mode-hook #'org-startup-hooks)
 #+end_src
 
 * Tree-Sitter.
 #+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Tree-sitter
+;; -----------------------------------------------------------------------------
 (use-package treesit
   :init
   (setq treesit-font-lock-level 4))
@@ -649,7 +681,11 @@ add to the font lock function calls operators and brackets.  The code
 was extracted from [[https://emacs.stackexchange.com/questions/16750/better-syntax-higlighting-for-member-variables-and-function-calls-in-cpp-mode][here]].
 
 #+begin_src emacs-lisp
-;; C-Like
+;; -----------------------------------------------------------------------------
+;; Programming languages configuration
+;; -----------------------------------------------------------------------------
+;; C-like languages
+;; -------------------------------------------------------
 (dolist (mode-iter '(c-mode c++-mode c-ts-mode c++-ts-mode glsl-mode java-mode javascript-mode rust-mode))
   (font-lock-add-keywords
     mode-iter
@@ -664,6 +700,9 @@ was extracted from [[https://emacs.stackexchange.com/questions/16750/better-synt
 #+end_src
 ** Javascript/Typescript
 #+begin_src emacs-lisp
+;; -------------------------------------------------------
+;; Web languages (js, ts, etc)
+;; -------------------------------------------------------
 (setq js-indent-level 2) ;; set indentation on js jsx, ts, tsx files to 2
 #+end_src
 
@@ -703,11 +742,14 @@ this one is set to a low value /(like 50 I think)/ the new window
 it'll be opened to the left of the current window.
 
 #+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Keybindings
+;; -----------------------------------------------------------------------------
 (repeat-mode 1)
-(global-set-key (kbd "C-x w t") 'enlarge-window) ;; t for taller
-(global-set-key (kbd "C-x w s") 'shrink-window)  ;; s for shrink
-(global-set-key (kbd "C-x w n") 'shrink-window-horizontally) ;; n for narrow
-(global-set-key (kbd "C-x w e") 'enlarge-window-horizontally) ;; e for enlarge
+(global-set-key (kbd "C-x w t") 'enlarge-window)              ; t for taller
+(global-set-key (kbd "C-x w s") 'shrink-window)               ; s for shrink
+(global-set-key (kbd "C-x w n") 'shrink-window-horizontally)  ; n for narrow
+(global-set-key (kbd "C-x w e") 'enlarge-window-horizontally) ; e for enlarge
 
 (defun my/create-new-window (direction)
   "Create a new window based on DIRECTION if DIRECTION is 'vertical, do
@@ -724,9 +766,10 @@ it'll be opened to the left of the current window.
       (funcall split-func)
       (other-window 1))))
 
-(global-set-key (kbd "C-c wr") '("split-window-right" . (lambda () (interactive) (my/create-new-window "v")))) ;; Create window on the right
-(global-set-key (kbd "C-c wd") '("split-window-bellow" . (lambda () (interactive) (my/create-new-window "h")))) ;; Create window below
-(global-set-key (kbd "C-c wq") #'delete-other-windows) ; Deleted all the windows except the current window
+(global-set-key (kbd "C-c wr") '("split-window-right" . (lambda () (interactive) (my/create-new-window "v"))))
+(global-set-key (kbd "C-c wd") '("split-window-bellow" . (lambda () (interactive) (my/create-new-window "h"))))
+
+(global-set-key (kbd "C-c wq") #'delete-other-windows)            ; Deleted all the windows except the current window
 (global-set-key (kbd "C-c wc") '("close window" . delete-window)) ; Close current window
 
 (defun prev-window ()
@@ -738,7 +781,7 @@ it'll be opened to the left of the current window.
 (global-set-key (kbd "M-O") #'prev-window)  ; Move cursor to window of the left
 
 (global-set-key (kbd "C-c w b") #'switch-to-buffer-other-window) ; Switch buffers in another window
-(global-set-key (kbd "C-c w f") #'find-file-other-window) ;; Find file in other window file-other-window
+(global-set-key (kbd "C-c w f") #'find-file-other-window)        ; Find file in other window file-other-window
 (defvar my/resize-window-repeat-map
   (let ((map (make-sparse-keymap)))
     (define-key map "t" 'enlarge-window)
@@ -764,7 +807,7 @@ This ones don't have a category to put them yet, so this section works like a al
   (global-set-key (kbd "C-x C-b") 'ibuffer) ; Change `list-buffer' for `ibuffer'
 #+end_src
 
-* Packages
+* Packages and mode configuration
 This is section is for the configuration and installation of packages, before I just to have a section for each package, since now I'm using =use-package= so I just move those sections to a subsection in here.
 
 ** Which Key
@@ -775,6 +818,9 @@ screen showing you the key combinations to do a command. Very useful
 if you are new to Emacs. 
 
 #+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Packages (plugins, minor modes, etc)
+;; -----------------------------------------------------------------------------
 (use-package which-key
   :ensure t
   :config
@@ -789,7 +835,7 @@ Provides a little popup for auto completion like and IDE or vs code or Kate.
 (use-package company
   :ensure t)
 
-(add-hook 'after-init-hook 'global-company-mode)
+
 (with-eval-after-load 'company
   (define-key company-active-map (kbd "M-/") #'company-complete))
 (with-eval-after-load 'company-complete
@@ -887,10 +933,6 @@ This puts colors to all the delimiters.
 (use-package emmet-mode  :ensure t)
 
 (use-package rjsx-mode  :ensure t)
-
-(use-package vue-ts-mode
-  :init
-  (add-to-list 'load-path (concat user-emacs-directory "lisp/vue-ts-mode")))
 #+end_src
 
 ** Org Appear
@@ -907,12 +949,59 @@ This puts colors to all the delimiters.
        :hook ((prog-mode . hl-todo-mode)
               (yaml-mode . hl-todo-mode)))
 #+end_src
-* Aspell
+
+** Display time mode
+#+begin_src emacs-lisp
+(display-time-mode)
+#+end_src
+* Aspell (spell checking)
 To have spell checking in emacs /remember to install ispell or gnu-aspell in your system/
 #+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Spell checking
+;; -----------------------------------------------------------------------------
 (setq-default ispell-program-name "aspell")
 #+end_src
 
+* Hooks
+** theme hooks
+#+begin_src emacs-lisp
+;; -----------------------------------------------------------------------------
+;; Hooks
+;; -----------------------------------------------------------------------------
+;; Custom hooks
+;; -------------------------------------------------------
+(defvar after-enable-theme-hook nil
+  "Hook to run after enabling a theme.")
 
+(defun run-after-enable-theme-hook (&rest _args)
+  "Run `after-enable-theme-hook'."
+  (run-hooks 'after-enable-theme-hook)
+  (my/change-cursor-color))
+
+(advice-add 'enable-theme :after #'run-after-enable-theme-hook)
+(add-hook 'after-init-hook #'run-after-enable-theme-hook)
+
+;; -------------------------------------------------------
+;; After init hook
+;; -------------------------------------------------------
+(add-hook 'after-init-hook 'global-company-mode)
+
+;; -------------------------------------------------------
+;; Org mode hooks
+;; -------------------------------------------------------
+(defun org-startup-hooks ()
+  (org-indent-mode)
+  (variable-pitch-mode)
+  (visual-line-mode))
+
+(add-hook 'org-mode-hook #'org-startup-hooks)
+(add-hook 'org-mode-hook #'my/change-cursor-type)
+
+;; -------------------------------------------------------
+;; prog mode hooks
+;; -------------------------------------------------------
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
+#+end_src
 
 
